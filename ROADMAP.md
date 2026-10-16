@@ -24,7 +24,13 @@
 - PWA: ikona, działa jak aplikacja i offline (bez kursów)
 - Numer wersji i „Co nowego” w Ustawieniach
 
-## 🔜 v1.5 – Więcej rynków (opcjonalnie, kosztuje limit API)
+## ✅ v1.5 – Silnik kuponów
+- Optymalizator: przeszukuje kombinacje meczów i wybiera najwyższą szansę dla zadanego kursu łącznego
+- Szanse z Pinnacle i giełd Betfair, usuwanie marży metodą potęgową (korekta na faworytów)
+- Odrzucanie meczów, przy których bukmacherzy się nie zgadzają (świeże newsy)
+- Ruch kursów ↑↓ od pierwszego pobrania, wybór Dziś / Jutro, top 10 najpewniejszych typów
+
+## 🔜 v1.6 – Więcej rynków (opcjonalnie, kosztuje limit API)
 - Over/Under 2.5 gola, handicapy
 - Przełącznik w Ustawieniach (każdy rynek = +1 zapytanie na ligę)
 

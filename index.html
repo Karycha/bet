@@ -55,6 +55,14 @@ nav button{flex:1;margin:0;border-radius:0;background:none;color:var(--mute);fon
 .leg .m{font-size:12px;color:var(--mute)}
 .cbig{display:flex;gap:8px;margin:10px 0}
 .cbig .stat{flex:1}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:12px 0}
+.cal .h{font-size:11px;color:var(--mute);text-align:center}
+.cal .d{aspect-ratio:1;border-radius:8px;background:var(--card2);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;color:var(--mute);padding:0;margin:0;width:auto;font-weight:500}
+.cal .d .dot{width:6px;height:6px;border-radius:50%;margin-top:3px;background:transparent}
+.cal .d.has{color:var(--text)}.cal .d.has .dot{background:var(--blue)}
+.cal .d.won .dot{background:var(--green)}.cal .d.lost .dot{background:var(--red)}.cal .d.pend .dot{background:var(--yellow)}
+.cal .d.today{border-color:var(--blue)}.cal .d.sel{background:#16314f;color:var(--text)}
+.cal .d.past{opacity:.45}.cal .e{visibility:hidden}
 nav button.on{color:var(--blue)}
 .hidden{display:none}
 .toggle{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
@@ -103,6 +111,15 @@ svg{width:100%;height:auto;display:block}
 
 <!-- ============ KUPONY ============ -->
 <section id="tab-coupons" class="hidden">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2 style="margin:0">Kupon dnia</h2>
+      <button id="btnDailyRefresh" class="sm ghost">Odśwież kursy</button>
+    </div>
+    <div id="dBudget" class="hint"></div>
+    <div id="dCal" class="cal"></div>
+    <div id="dDetail"></div>
+  </div>
   <div class="card">
     <h2>Najpewniejsze kupony</h2>
     <div class="hint">Szansa liczona z kursów kilkudziesięciu bukmacherów (bez marży). Typy, które przy podatku nic nie dają nawet po wygranej, są pomijane.</div>
@@ -180,6 +197,11 @@ svg{width:100%;height:auto;display:block}
     <input id="sDaily" type="number" inputmode="decimal">
     <div class="toggle"><span>Podatek 12% od stawki</span><input id="sTax" type="checkbox"></div>
     <div class="hint">Wyłącz, jeśli Twój bukmacher akurat pokrywa podatek za Ciebie.</div>
+    <label>Budżet miesięczny na kupony dnia (zł)</label>
+    <input id="sMonth" type="number" inputmode="decimal">
+    <div class="hint">Apka dzieli to, co zostało, przez pozostałe dni miesiąca. Więcej w miesiącu nie postawisz.</div>
+    <label>Kupon dnia: liczba meczów</label>
+    <select id="sDSize"><option value="1">1 (pojedynczy)</option><option value="2">2 (AKO)</option><option value="3">3 (AKO)</option></select>
     <label>Klucz The Odds API (potrzebny do Kuponów)</label>
     <input id="sKey" placeholder="wklej klucz">
     <button id="btnSave">Zapisz</button>
@@ -216,7 +238,8 @@ const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 const DEFAULTS = {
-  settings: {start: 500, kelly: 0.25, maxPct: 3, edge: 3, stop: 30, daily: 50, tax: true, apiKey: ""},
+  settings: {start: 500, kelly: 0.25, maxPct: 3, edge: 3, stop: 30, daily: 50, tax: true, apiKey: "", month: 150, dSize: 2},
+  daily: {},
   bets: []
 };
 
@@ -226,6 +249,7 @@ function load() {
   if (!S) S = structuredClone(DEFAULTS);
   S.settings = {...DEFAULTS.settings, ...S.settings};
   S.bets = S.bets || [];
+  S.daily = S.daily || {};
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} }
 
@@ -522,7 +546,7 @@ const LEAGUES = [
   ["soccer_netherlands_eredivisie", "Eredivisie", 0], ["basketball_nba", "NBA", 0],
   ["basketball_euroleague", "Euroliga", 0], ["icehockey_nhl", "NHL", 0]
 ];
-const CACHE_MIN = 30;
+const CACHE_MIN = 360; // oszczędza limit 500 zapytań/mies.
 function selLeagues() {
   try { const s = JSON.parse(localStorage.getItem(KEY + "_leagues")); if (Array.isArray(s)) return s; } catch {}
   return LEAGUES.filter(l => l[2]).map(l => l[0]);
@@ -539,11 +563,11 @@ document.addEventListener("click", e => {
   renderLeagueChips();
 });
 
-async function getEvents(sport) {
+async function getEvents(sport, force = false) {
   const ck = KEY + "_odds_" + sport;
   try {
     const c = JSON.parse(localStorage.getItem(ck));
-    if (c && Date.now() - c.ts < CACHE_MIN * 60000) return c.data;
+    if (c && !force && Date.now() - c.ts < CACHE_MIN * 60000) return c.data;
   } catch {}
   const data = await api(`/sports/${sport}/odds?regions=eu&markets=h2h&oddsFormat=decimal`);
   try { localStorage.setItem(ck, JSON.stringify({ts: Date.now(), data})); } catch {}
@@ -627,12 +651,174 @@ document.addEventListener("click", e => {
 });
 $("btnCoupons").onclick = () => { couponStore = []; buildCoupons(); };
 
+/* ---------- Kupon dnia + kalendarz miesiąca ---------- */
+const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const todayKey = () => dayKey(new Date());
+let dayCands = {};        // dzień -> kandydaci (z aktualnych kursów)
+let selDay = null;
+let dailyLoaded = false;
+
+function pickLabel(ev, name) {
+  if (name === ev.home_team) return `1 (${name})`;
+  if (name === ev.away_team) return `2 (${name})`;
+  if (/draw/i.test(name)) return "X (remis)";
+  return name;
+}
+
+async function loadDaily(force = false) {
+  if (!S.settings.apiKey) { $("dDetail").innerHTML = `<div class="hint">Wklej klucz API w Ustawieniach.</div>`; renderCal(); return; }
+  $("dDetail").innerHTML = `<div class="hint">Pobieram kursy…</div>`;
+  const leagueName = Object.fromEntries(LEAGUES.map(l => [l[0], l[1]]));
+  const now = Date.now();
+  dayCands = {};
+  for (const sp of selLeagues()) {
+    let evs;
+    try { evs = await getEvents(sp, force); } catch (e) { if (/klucz|401/.test(e.message)) { $("dDetail").innerHTML = `<div class="hint">${esc(e.message)}</div>`; return; } continue; }
+    for (const ev of evs) {
+      const t = new Date(ev.commence_time);
+      if (t.getTime() < now + 10 * 60000) continue;
+      const a = analyzeEvent(ev); if (!a) continue;
+      const best = a.res.map(r => ({r, odds: r.betclic || r.best.price, book: r.betclic ? "Betclic" : r.best.book}))
+        .filter(o => o.odds * taxF() >= 1.03).sort((x, y) => y.r.p - x.r.p)[0];
+      if (!best) continue;
+      const k = dayKey(t);
+      (dayCands[k] = dayCands[k] || []).push({
+        home: ev.home_team, away: ev.away_team, time: ev.commence_time, league: leagueName[sp] || sp,
+        pick: pickLabel(ev, best.r.name), p: best.r.p, odds: best.odds, book: best.book
+      });
+    }
+  }
+  Object.values(dayCands).forEach(l => l.sort((a, b) => b.p - a.p));
+  // zamroź dzisiejszy kupon (żeby nie zmieniał się w ciągu dnia)
+  const tk = todayKey();
+  if (!S.daily[tk] || (!S.daily[tk].betId && force)) {
+    const c = makeDaily(tk);
+    if (c) { S.daily[tk] = c; save(); }
+  }
+  dailyLoaded = true;
+  if (!selDay) selDay = tk;
+  renderCal(); renderDay(selDay);
+}
+
+function makeDaily(k) {
+  const legs = (dayCands[k] || []).slice(0, S.settings.dSize);
+  if (legs.length < S.settings.dSize) return null;
+  return {legs, p: legs.reduce((a, l) => a * l.p, 1), odds: legs.reduce((a, l) => a * l.odds, 1)};
+}
+
+function monthInfo() {
+  const now = new Date();
+  const ym = todayKey().slice(0, 7);
+  const spent = S.bets.filter(b => b.daily && b.daily.startsWith(ym)).reduce((a, b) => a + b.stake, 0);
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const playedToday = S.bets.some(b => b.daily === todayKey());
+  const daysLeft = Math.max(1, daysInMonth - now.getDate() + (playedToday ? 0 : 1));
+  const left = Math.max(0, S.settings.month - spent);
+  return {spent, left, daysLeft, perDay: Math.floor(left / daysLeft)};
+}
+
+function dailyStake() {
+  const m = monthInfo();
+  const free = bankroll() - pendingStake();
+  const r = recommend(2, 0.5, 0.5); // tylko po to, by sprawdzić stop-loss / limit dzienny
+  if (r.type === "stop") return {stake: 0, reason: r.reason};
+  let stake = Math.min(m.perDay, Math.floor(free));
+  if (stake < 2) return {stake: 0, reason: m.left < 2 ? "Budżet na ten miesiąc wykorzystany. Kolejne kupony od 1. dnia następnego miesiąca." : "Za mało wolnych środków na saldzie."};
+  return {stake, reason: ""};
+}
+
+function renderCal() {
+  const m = monthInfo();
+  $("dBudget").innerHTML = `Budżet miesiąca: <b style="color:var(--text)">${zl(S.settings.month)}</b> · wydane ${zl(m.spent)} · zostało ${zl(m.left)} na ${m.daysLeft} dni (~${zl(m.perDay)}/dzień)`;
+  const now = new Date(), y = now.getFullYear(), mo = now.getMonth();
+  const first = new Date(y, mo, 1), dim = new Date(y, mo + 1, 0).getDate();
+  const off = (first.getDay() + 6) % 7; // pon = 0
+  const tk = todayKey();
+  let h = ["Pn", "Wt", "Śr", "Cz", "Pt", "So", "Nd"].map(d => `<div class="h">${d}</div>`).join("");
+  for (let i = 0; i < off; i++) h += `<div class="d e"></div>`;
+  for (let d = 1; d <= dim; d++) {
+    const k = dayKey(new Date(y, mo, d));
+    const saved = S.daily[k];
+    const bet = saved?.betId && S.bets.find(b => b.id === saved.betId);
+    let cls = "d";
+    if (k < tk) cls += " past";
+    if (k === tk) cls += " today";
+    if (k === selDay) cls += " sel";
+    if (bet) cls += bet.status === "won" ? " has won" : bet.status === "lost" ? " has lost" : bet.status === "pending" ? " has pend" : " has";
+    else if (saved || (k >= tk && dayCands[k]?.length >= S.settings.dSize)) cls += " has";
+    h += `<button class="${cls}" data-day="${k}">${d}<span class="dot"></span></button>`;
+  }
+  $("dCal").innerHTML = h;
+}
+
+function renderDay(k) {
+  const tk = todayKey();
+  const nice = new Date(k + "T12:00").toLocaleDateString("pl-PL", {weekday: "long", day: "numeric", month: "long"});
+  const c = S.daily[k] || (k >= tk ? makeDaily(k) : null);
+  if (!c) {
+    const why = k < tk ? "W tym dniu nie było kuponu." :
+      !dailyLoaded ? "Wczytywanie…" :
+      `Brak jeszcze kursów na ten dzień. Bukmacherzy wystawiają je zwykle kilka dni przed meczem — kupon pojawi się sam.`;
+    $("dDetail").innerHTML = `<div class="hint" style="margin-top:4px"><b style="color:var(--text)">${nice}</b><br>${why}</div>`;
+    return;
+  }
+  const bet = c.betId && S.bets.find(b => b.id === c.betId);
+  const isToday = k === tk, future = k > tk;
+  const ds = dailyStake();
+  const stake = bet ? bet.stake : ds.stake;
+  const ev = c.p * c.odds * taxF() - 1;
+  const fmt = t => new Date(t).toLocaleTimeString("pl-PL", {hour: "2-digit", minute: "2-digit"});
+  const st = bet ? {pending: "zagrany, czeka na wynik", won: "WYGRANY", lost: "przegrany", void: "zwrot"}[bet.status] : null;
+  $("dDetail").innerHTML = `
+    <div style="margin:4px 0 8px"><b>${nice}</b>${future ? ` <span class="tag">wstępny — kursy mogą się zmienić</span>` : ""}${st ? ` <span class="tag ${bet.status === "won" ? "v" : ""}">${st}</span>` : ""}</div>
+    ${c.legs.map(l => `<div class="leg"><div><b>${esc(l.home)} – ${esc(l.away)}</b>
+      <div class="m">${esc(l.league)} · ${fmt(l.time)} · typ: <b style="color:var(--text)">${esc(l.pick)}</b></div></div>
+      <div style="text-align:right;white-space:nowrap">${l.odds.toFixed(2)}<div class="m">${pct(l.p, 0)} · ${esc(l.book)}</div></div></div>`).join("")}
+    <div class="cbig">
+      <div class="stat"><div class="v">${pct(c.p, 0)}</div><div class="k">szansa wejścia</div></div>
+      <div class="stat"><div class="v">${c.odds.toFixed(2)}</div><div class="k">kurs łączny</div></div>
+      <div class="stat"><div class="v">${stake ? zl(stake) : "–"}</div><div class="k">stawka</div></div>
+    </div>
+    <div class="hint">${stake ? `Możliwa wygrana: <b style="color:var(--text)">${zl(stake * taxF() * c.odds)}</b> · ` : ""}EV po podatku: <span style="color:${ev >= 0 ? "var(--green)" : "var(--red)"}">${ev >= 0 ? "+" : ""}${pct(ev)}</span>${!bet && ds.reason ? `<br>${esc(ds.reason)}` : ""}</div>
+    <div class="row">
+      <button class="ghost" data-copy="${k}">Kopiuj kupon</button>
+      ${isToday && !bet && ds.stake ? `<button class="g" data-playday="${k}">Zagrałem</button>` : ""}
+    </div>
+    ${bet && bet.status === "pending" ? `<div class="hint">Wynik zaznacz w zakładce Zakłady.</div>` : ""}`;
+}
+
+document.addEventListener("click", async e => {
+  const d = e.target.closest("[data-day]");
+  if (d) { selDay = d.dataset.day; renderCal(); renderDay(selDay); return; }
+  const cp = e.target.closest("[data-copy]");
+  if (cp) {
+    const k = cp.dataset.copy, c = S.daily[k] || makeDaily(k); if (!c) return;
+    const txt = `Kupon ${k}\n` + c.legs.map(l => `${l.home} – ${l.away} (${new Date(l.time).toLocaleTimeString("pl-PL", {hour: "2-digit", minute: "2-digit"})}): ${l.pick} @ ${l.odds.toFixed(2)}`).join("\n") + `\nKurs łączny: ${c.odds.toFixed(2)}`;
+    try { await navigator.clipboard.writeText(txt); cp.textContent = "Skopiowano ✓"; } catch { prompt("Skopiuj:", txt); }
+    return;
+  }
+  const pl = e.target.closest("[data-playday]");
+  if (pl) {
+    const k = pl.dataset.playday, c = S.daily[k]; const ds = dailyStake(); if (!c || !ds.stake) return;
+    const id = Date.now().toString(36);
+    S.bets.unshift({
+      id, date: new Date().toISOString(), daily: k,
+      event: "Kupon dnia: " + c.legs.map(l => `${l.home}–${l.away}`).join(" + "),
+      pick: c.legs.map(l => l.pick).join(" + "),
+      odds: c.odds, userP: c.p, marketP: c.p, adjP: c.p, stake: ds.stake, status: "pending", settledAt: null
+    });
+    c.betId = id; save(); renderAll(); renderCal(); renderDay(k);
+  }
+});
+$("btnDailyRefresh").onclick = () => loadDaily(true);
+
 /* ---------- Settings ---------- */
 function fillSettings() {
   const s = S.settings;
   $("sStart").value = s.start; $("sKelly").value = s.kelly; $("sMax").value = s.maxPct;
   $("sEdge").value = s.edge; $("sStop").value = s.stop; $("sDaily").value = s.daily;
   $("sTax").checked = s.tax; $("sKey").value = s.apiKey;
+  $("sMonth").value = s.month; $("sDSize").value = s.dSize;
 }
 $("btnSave").onclick = () => {
   const n = (id, d, lo, hi) => { const v = parseFloat(($(id).value || "").replace(",", ".")); return isFinite(v) ? clamp(v, lo, hi) : d; };
@@ -641,6 +827,7 @@ $("btnSave").onclick = () => {
   s.maxPct = n("sMax", s.maxPct, 0.5, 25); s.edge = n("sEdge", s.edge, 0, 50);
   s.stop = n("sStop", s.stop, 5, 100); s.daily = n("sDaily", s.daily, 1, 1e7);
   s.tax = $("sTax").checked; s.apiKey = $("sKey").value.trim();
+  s.month = n("sMonth", s.month, 0, 1e7); s.dSize = +$("sDSize").value || 2;
   save(); fillSettings(); renderAll();
   $("btnSave").textContent = "Zapisano ✓"; setTimeout(() => $("btnSave").textContent = "Zapisz", 1200);
   if (s.apiKey && !$("mSport").value) loadSports();
@@ -662,6 +849,7 @@ function show(tab) {
   document.querySelectorAll("main>section").forEach(s => s.classList.toggle("hidden", s.id !== "tab-" + tab));
   document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.tab === tab));
   if (tab === "stats") renderStats();
+  if (tab === "coupons") { renderCal(); if (!dailyLoaded) loadDaily(); else renderDay(selDay); }
 }
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => show(b.dataset.tab));
 

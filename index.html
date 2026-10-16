@@ -156,7 +156,11 @@ svg{width:100%;height:auto;display:block}
 <!-- ============ ZAKŁADY ============ -->
 <section id="tab-bets" class="hidden">
   <div class="card">
-    <h2>Otwarte</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2 style="margin:0">Otwarte</h2>
+      <button id="btnSettle" class="sm ghost">Sprawdź wyniki</button>
+    </div>
+    <div id="settleInfo" class="hint"></div>
     <div id="openList"></div>
   </div>
   <div class="card">
@@ -368,7 +372,7 @@ $("btnPlace").onclick = () => {
     id: Date.now().toString(36), date: new Date().toISOString(),
     event: $("fEvent").value.trim() || "Zakład", pick: $("fPick").value.trim(),
     odds: lastRec.odds, userP: lastRec.userP, marketP: lastRec.marketP, adjP: lastRec.adjP,
-    stake: lastRec.stake, status: "pending", settledAt: null
+    stake: lastRec.stake, status: "pending", settledAt: null, src: "analiza"
   });
   save();
   ["fEvent", "fPick", "fOdds", "fOther", "fProb"].forEach(id => $(id).value = "");
@@ -382,7 +386,8 @@ function betRow(b, open) {
   const stTxt = {pending: "w grze", won: "wygrany", lost: "przegrany", void: "zwrot"}[b.status];
   return `<div class="bet">
     <div class="t"><b>${esc(b.event)}</b><span class="st-${b.status}">${b.status === "pending" ? zl(b.stake) : (pl >= 0 ? "+" : "") + zl(pl)}</span></div>
-    <div class="m">${esc(b.pick)} @ ${b.odds.toFixed(2)} · stawka ${zl(b.stake)} · ${stTxt} · ${new Date(b.date).toLocaleDateString("pl-PL")}</div>
+    <div class="m">${b.legs ? "" : esc(b.pick) + " @ "}${b.odds.toFixed(2)} · stawka ${zl(b.stake)} · ${stTxt} · ${new Date(b.date).toLocaleDateString("pl-PL")}</div>
+    ${b.legs ? b.legs.map(l => `<div class="m">${l.result === true ? "✅" : l.result === false ? "❌" : "⏳"} ${esc(l.home)} – ${esc(l.away)}: ${esc(l.pick || l.outcome)}${l.score ? ` <span style="opacity:.8">(${esc(l.score)})</span>` : ""}</div>`).join("") : ""}
     ${open ? `<div class="acts">
       <button class="sm g" data-act="won" data-id="${b.id}">Wygrany</button>
       <button class="sm r" data-act="lost" data-id="${b.id}">Przegrany</button>
@@ -401,9 +406,54 @@ document.addEventListener("click", e => {
   const b = S.bets.find(x => x.id === t.dataset.id); if (!b) return;
   const a = t.dataset.act;
   if (a === "del") { if (!confirm("Usunąć ten zakład?")) return; S.bets = S.bets.filter(x => x !== b); }
-  else { b.status = a; b.settledAt = a === "pending" ? null : new Date().toISOString(); }
+  else { b.status = a; b.settledAt = a === "pending" ? null : new Date().toISOString(); if (a === "pending" && b.legs) b.legs.forEach(l => { delete l.result; delete l.score; }); }
   save(); renderAll();
 });
+
+/* ---------- v1.1 Auto-rozliczanie ---------- */
+async function getScores(sport, force) {
+  const ck = KEY + "_scores_" + sport;
+  try { const c = JSON.parse(localStorage.getItem(ck)); if (c && !force && Date.now() - c.ts < 60 * 60000) return c.data; } catch {}
+  const data = await api(`/sports/${sport}/scores?daysFrom=3`);
+  try { localStorage.setItem(ck, JSON.stringify({ts: Date.now(), data})); } catch {}
+  return data;
+}
+let settling = false;
+async function autoSettle(manual = false) {
+  if (settling || !S.settings.apiKey) return;
+  const info = msg => { $("settleInfo").textContent = msg; };
+  const now = Date.now();
+  const auto = S.bets.filter(b => b.status === "pending" && b.legs?.length && b.legs.every(l => l.id && l.sport));
+  const dueLegs = auto.flatMap(b => b.legs).filter(l => l.result === undefined && Date.parse(l.time) + 110 * 60000 < now);
+  if (!dueLegs.length) { if (manual) info("Żaden mecz z otwartych kuponów jeszcze się nie skończył."); return; }
+  settling = true; info("Sprawdzam wyniki…");
+  const byId = {};
+  try {
+    for (const sp of [...new Set(dueLegs.map(l => l.sport))]) {
+      try { (await getScores(sp, manual)).forEach(e => byId[e.id] = e); } catch (e) { if (/klucz|401/.test(e.message)) throw e; }
+    }
+  } catch (e) { info(e.message); settling = false; return; }
+  let changed = 0;
+  for (const b of auto) {
+    for (const l of b.legs) {
+      if (l.result !== undefined) continue;
+      const e = byId[l.id];
+      if (!e || !e.completed || !e.scores) continue;
+      const sc = Object.fromEntries(e.scores.map(x => [x.name, parseFloat(x.score)]));
+      const h = sc[e.home_team], a = sc[e.away_team];
+      if (!isFinite(h) || !isFinite(a)) continue;
+      const winner = h > a ? e.home_team : a > h ? e.away_team : "Draw";
+      l.result = winner === l.outcome; l.score = `${h}:${a}`;
+    }
+    const res = b.legs.map(l => l.result);
+    const ns = res.includes(false) ? "lost" : res.every(r => r === true) ? "won" : "pending";
+    if (ns !== b.status) { b.status = ns; b.settledAt = new Date().toISOString(); changed++; }
+  }
+  save(); renderAll(); if (typeof renderCal === "function" && dailyLoaded) { renderCal(); renderDay(selDay); }
+  info(changed ? `Rozliczono automatycznie: ${changed}.` : "Brak nowych wyników (mecze mogą jeszcze trwać).");
+  settling = false;
+}
+$("btnSettle").onclick = () => autoSettle(true);
 
 /* ---------- Stats ---------- */
 function renderStats() {
@@ -595,7 +645,7 @@ async function buildCoupons() {
       const opts = a.res.map(r => {
         const odds = r.betclic || r.best.price;
         const book = r.betclic ? "Betclic" : r.best.book;
-        return {ev, league: leagueName[sp] || sp, pick: r.name, p: r.p, odds, book, ev_: r.p * odds * taxF() - 1, eff: odds * taxF()};
+        return {ev, sport: sp, league: leagueName[sp] || sp, pick: pickLabel(ev, r.name), outcome: r.name, p: r.p, odds, book, ev_: r.p * odds * taxF() - 1, eff: odds * taxF()};
       }).filter(o => o.eff >= 1.03);
       if (!opts.length) continue;
       opts.sort((x, y) => mode === "value" ? y.ev_ - x.ev_ : y.p - x.p);
@@ -645,7 +695,8 @@ document.addEventListener("click", e => {
     id: Date.now().toString(36), date: new Date().toISOString(),
     event: c.legs.map(l => `${l.ev.home_team}–${l.ev.away_team}`).join(" + "),
     pick: c.legs.map(l => l.pick).join(" + "),
-    odds: c.odds, userP: c.p, marketP: c.p, adjP: c.p, stake: c.stake, status: "pending", settledAt: null
+    odds: c.odds, userP: c.p, marketP: c.p, adjP: c.p, stake: c.stake, status: "pending", settledAt: null, src: "kupony",
+    legs: c.legs.map(l => ({id: l.ev.id, sport: l.sport, outcome: l.outcome, pick: l.pick, home: l.ev.home_team, away: l.ev.away_team, time: l.ev.commence_time, league: l.league, odds: l.odds, p: l.p}))
   });
   save(); renderAll(); t.textContent = "Zapisano ✓"; t.disabled = true;
 });
@@ -683,6 +734,7 @@ async function loadDaily(force = false) {
       if (!best) continue;
       const k = dayKey(t);
       (dayCands[k] = dayCands[k] || []).push({
+        id: ev.id, sport: sp, outcome: best.r.name,
         home: ev.home_team, away: ev.away_team, time: ev.commence_time, league: leagueName[sp] || sp,
         pick: pickLabel(ev, best.r.name), p: best.r.p, odds: best.odds, book: best.book
       });
@@ -805,7 +857,8 @@ document.addEventListener("click", async e => {
       id, date: new Date().toISOString(), daily: k,
       event: "Kupon dnia: " + c.legs.map(l => `${l.home}–${l.away}`).join(" + "),
       pick: c.legs.map(l => l.pick).join(" + "),
-      odds: c.odds, userP: c.p, marketP: c.p, adjP: c.p, stake: ds.stake, status: "pending", settledAt: null
+      odds: c.odds, userP: c.p, marketP: c.p, adjP: c.p, stake: ds.stake, status: "pending", settledAt: null, src: "dzien",
+      legs: c.legs.map(l => ({...l}))
     });
     c.betId = id; save(); renderAll(); renderCal(); renderDay(k);
   }
@@ -864,6 +917,7 @@ function renderAll() { renderHeader(); renderBets(); renderStats(); analyze(); }
 
 load(); fillSettings(); renderAll(); renderLeagueChips();
 show(S.settings.apiKey ? "coupons" : "analyze");
+setTimeout(() => autoSettle(false), 1500);
 try { const c = localStorage.getItem(KEY + "_sports"); if (c) $("mSport").innerHTML = c; } catch {}
 if (!localStorage.getItem(KEY)) show("settings");
 </script>

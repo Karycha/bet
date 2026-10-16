@@ -206,6 +206,9 @@ svg{width:100%;height:auto;display:block}
     <div class="hint">Apka dzieli to, co zostało, przez pozostałe dni miesiąca. Więcej w miesiącu nie postawisz.</div>
     <label>Kupon dnia: liczba meczów</label>
     <select id="sDSize"><option value="1">1 (pojedynczy)</option><option value="2">2 (AKO)</option><option value="3">3 (AKO)</option></select>
+    <label>Minimalny kurs pojedynczego typu</label>
+    <input id="sMinOdds" type="number" step="0.05" inputmode="decimal">
+    <div class="hint">Kursy niższe niż ok. 1.15 po podatku 12% nic nie dają nawet po wygranej.</div>
     <label>Klucz The Odds API (potrzebny do Kuponów)</label>
     <input id="sKey" placeholder="wklej klucz">
     <button id="btnSave">Zapisz</button>
@@ -242,7 +245,7 @@ const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 const DEFAULTS = {
-  settings: {start: 500, kelly: 0.25, maxPct: 3, edge: 3, stop: 30, daily: 50, tax: true, apiKey: "", month: 150, dSize: 2},
+  settings: {start: 500, kelly: 0.25, maxPct: 3, edge: 3, stop: 30, daily: 50, tax: true, apiKey: "", month: 150, dSize: 2, minOdds: 1.20},
   daily: {},
   bets: []
 };
@@ -646,7 +649,7 @@ async function buildCoupons() {
         const odds = r.betclic || r.best.price;
         const book = r.betclic ? "Betclic" : r.best.book;
         return {ev, sport: sp, league: leagueName[sp] || sp, pick: pickLabel(ev, r.name), outcome: r.name, p: r.p, odds, book, ev_: r.p * odds * taxF() - 1, eff: odds * taxF()};
-      }).filter(o => o.eff >= 1.03);
+      }).filter(o => o.eff >= 1.03 && o.odds >= S.settings.minOdds);
       if (!opts.length) continue;
       opts.sort((x, y) => mode === "value" ? y.ev_ - x.ev_ : y.p - x.p);
       cands.push(opts[0]);
@@ -730,7 +733,7 @@ async function loadDaily(force = false) {
       if (t.getTime() < now + 10 * 60000) continue;
       const a = analyzeEvent(ev); if (!a) continue;
       const best = a.res.map(r => ({r, odds: r.betclic || r.best.price, book: r.betclic ? "Betclic" : r.best.book}))
-        .filter(o => o.odds * taxF() >= 1.03).sort((x, y) => y.r.p - x.r.p)[0];
+        .filter(o => o.odds * taxF() >= 1.03 && o.odds >= S.settings.minOdds).sort((x, y) => y.r.p - x.r.p)[0];
       if (!best) continue;
       const k = dayKey(t);
       (dayCands[k] = dayCands[k] || []).push({
@@ -820,11 +823,13 @@ function renderDay(k) {
   const stake = bet ? bet.stake : ds.stake;
   const ev = c.p * c.odds * taxF() - 1;
   const fmt = t => new Date(t).toLocaleTimeString("pl-PL", {hour: "2-digit", minute: "2-digit"});
+  const canSwap = !bet && k >= tk && dailyLoaded;
   const st = bet ? {pending: "zagrany, czeka na wynik", won: "WYGRANY", lost: "przegrany", void: "zwrot"}[bet.status] : null;
   $("dDetail").innerHTML = `
     <div style="margin:4px 0 8px"><b>${nice}</b>${future ? ` <span class="tag">wstępny — kursy mogą się zmienić</span>` : ""}${st ? ` <span class="tag ${bet.status === "won" ? "v" : ""}">${st}</span>` : ""}</div>
-    ${c.legs.map(l => `<div class="leg"><div><b>${esc(l.home)} – ${esc(l.away)}</b>
-      <div class="m">${esc(l.league)} · ${fmt(l.time)} · typ: <b style="color:var(--text)">${esc(l.pick)}</b></div></div>
+    ${c.legs.map((l, i) => `<div class="leg"><div><b>${esc(l.home)} – ${esc(l.away)}</b>
+      <div class="m">${esc(l.league)} · ${fmt(l.time)} · typ: <b style="color:var(--text)">${esc(l.pick)}</b></div>
+      ${canSwap ? `<button class="sm ghost" style="margin-top:5px" data-swap="${k}|${i}">↻ Zamień mecz</button>` : ""}</div>
       <div style="text-align:right;white-space:nowrap">${l.odds.toFixed(2)}<div class="m">${pct(l.p, 0)} · ${esc(l.book)}</div></div></div>`).join("")}
     <div class="cbig">
       <div class="stat"><div class="v">${pct(c.p, 0)}</div><div class="k">szansa wejścia</div></div>
@@ -865,13 +870,29 @@ document.addEventListener("click", async e => {
 });
 $("btnDailyRefresh").onclick = () => loadDaily(true);
 
+/* ---------- v1.2 Zamiana meczu ---------- */
+const legKey = l => l.home + "|" + l.away;
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-swap]"); if (!t) return;
+  const [k, iStr] = t.dataset.swap.split("|"); const i = +iStr;
+  const c = S.daily[k] || makeDaily(k); if (!c || c.betId) return;
+  c.skip = c.skip || [];
+  c.skip.push(legKey(c.legs[i]));
+  const used = new Set([...c.legs.map(legKey), ...c.skip]);
+  const next = (dayCands[k] || []).find(l => !used.has(legKey(l)));
+  if (!next) { t.textContent = "Brak innych meczów tego dnia"; t.disabled = true; c.skip.pop(); return; }
+  c.legs[i] = next;
+  c.p = c.legs.reduce((a, l) => a * l.p, 1); c.odds = c.legs.reduce((a, l) => a * l.odds, 1);
+  S.daily[k] = c; save(); renderCal(); renderDay(k);
+});
+
 /* ---------- Settings ---------- */
 function fillSettings() {
   const s = S.settings;
   $("sStart").value = s.start; $("sKelly").value = s.kelly; $("sMax").value = s.maxPct;
   $("sEdge").value = s.edge; $("sStop").value = s.stop; $("sDaily").value = s.daily;
   $("sTax").checked = s.tax; $("sKey").value = s.apiKey;
-  $("sMonth").value = s.month; $("sDSize").value = s.dSize;
+  $("sMonth").value = s.month; $("sDSize").value = s.dSize; $("sMinOdds").value = s.minOdds;
 }
 $("btnSave").onclick = () => {
   const n = (id, d, lo, hi) => { const v = parseFloat(($(id).value || "").replace(",", ".")); return isFinite(v) ? clamp(v, lo, hi) : d; };
@@ -880,7 +901,7 @@ $("btnSave").onclick = () => {
   s.maxPct = n("sMax", s.maxPct, 0.5, 25); s.edge = n("sEdge", s.edge, 0, 50);
   s.stop = n("sStop", s.stop, 5, 100); s.daily = n("sDaily", s.daily, 1, 1e7);
   s.tax = $("sTax").checked; s.apiKey = $("sKey").value.trim();
-  s.month = n("sMonth", s.month, 0, 1e7); s.dSize = +$("sDSize").value || 2;
+  s.month = n("sMonth", s.month, 0, 1e7); s.dSize = +$("sDSize").value || 2; s.minOdds = n("sMinOdds", s.minOdds, 1.01, 10);
   save(); fillSettings(); renderAll();
   $("btnSave").textContent = "Zapisano ✓"; setTimeout(() => $("btnSave").textContent = "Zapisz", 1200);
   if (s.apiKey && !$("mSport").value) loadSports();

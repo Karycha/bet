@@ -46,7 +46,15 @@ button.g{background:var(--green)}button.r{background:var(--red)}
 .stat{background:var(--card2);border-radius:10px;padding:10px}
 .stat .v{font-size:20px;font-weight:700}.stat .k{font-size:12px;color:var(--mute)}
 nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#12151b;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
-nav button{flex:1;margin:0;border-radius:0;background:none;color:var(--mute);font-weight:500;padding:14px 4px;font-size:13px}
+nav button{flex:1;margin:0;border-radius:0;background:none;color:var(--mute);font-weight:500;padding:14px 2px;font-size:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--card2);border:1px solid var(--line);color:var(--mute);border-radius:999px;padding:6px 11px;font-size:13px;width:auto;margin:0;font-weight:500}
+.chip.on{background:#16314f;border-color:var(--blue);color:var(--text)}
+.leg{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:14px}
+.leg:first-of-type{border-top:0}
+.leg .m{font-size:12px;color:var(--mute)}
+.cbig{display:flex;gap:8px;margin:10px 0}
+.cbig .stat{flex:1}
 nav button.on{color:var(--blue)}
 .hidden{display:none}
 .toggle{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
@@ -91,6 +99,27 @@ svg{width:100%;height:auto;display:block}
   <div class="card">
     <div class="warn">Bukmacher ma przewagę (marża + w PL zwykle 12% podatku od stawki). Apka nie zgaduje wyników — mówi, kiedy kurs jest wart gry wg Twojej oceny, ile postawić i kiedy przestać. Najczęstszy werdykt to „nie graj” i to jest poprawne.</div>
   </div>
+</section>
+
+<!-- ============ KUPONY ============ -->
+<section id="tab-coupons" class="hidden">
+  <div class="card">
+    <h2>Najpewniejsze kupony</h2>
+    <div class="hint">Szansa liczona z kursów kilkudziesięciu bukmacherów (bez marży). Typy, które przy podatku nic nie dają nawet po wygranej, są pomijane.</div>
+    <label>Ligi</label>
+    <div id="cLeagues" class="chips"></div>
+    <div class="row">
+      <div><label>Mecze w ciągu</label>
+        <select id="cHours"><option value="24">24 h</option><option value="48" selected>48 h</option><option value="72">72 h</option><option value="168">7 dni</option></select></div>
+      <div><label>Rodzaj kuponu</label>
+        <select id="cSize"><option value="1">Pojedyncze</option><option value="2" selected>AKO ×2</option><option value="3">AKO ×3</option></select></div>
+    </div>
+    <label>Sortuj</label>
+    <select id="cSort"><option value="prob">Najwyższa szansa</option><option value="value">Najlepsza wartość</option></select>
+    <button id="btnCoupons">Wygeneruj kupony</button>
+    <div id="cInfo" class="hint"></div>
+  </div>
+  <div id="cList"></div>
 </section>
 
 <!-- ============ RYNEK ============ -->
@@ -151,7 +180,7 @@ svg{width:100%;height:auto;display:block}
     <input id="sDaily" type="number" inputmode="decimal">
     <div class="toggle"><span>Podatek 12% od stawki</span><input id="sTax" type="checkbox"></div>
     <div class="hint">Wyłącz, jeśli Twój bukmacher akurat pokrywa podatek za Ciebie.</div>
-    <label>Klucz The Odds API (opcjonalnie)</label>
+    <label>Klucz The Odds API (potrzebny do Kuponów)</label>
     <input id="sKey" placeholder="wklej klucz">
     <button id="btnSave">Zapisz</button>
   </div>
@@ -169,6 +198,7 @@ svg{width:100%;height:auto;display:block}
 </main>
 
 <nav>
+  <button data-tab="coupons">Kupony</button>
   <button data-tab="analyze" class="on">Analiza</button>
   <button data-tab="market">Rynek</button>
   <button data-tab="bets">Zakłady</button>
@@ -401,7 +431,7 @@ async function api(path) {
   if (!key) throw new Error("Dodaj klucz API w Ustawieniach.");
   const r = await fetch(`${API}${path}${path.includes("?") ? "&" : "?"}apiKey=${encodeURIComponent(key)}`);
   const left = r.headers.get("x-requests-remaining");
-  if (left) $("mInfo").textContent = `Pozostało zapytań w tym miesiącu: ${left}`;
+  if (left) { $("mInfo").textContent = $("cInfo").textContent = `Pozostało zapytań API w tym miesiącu: ${left}`; }
   if (!r.ok) throw new Error(`Błąd API (${r.status}). Sprawdź klucz.`);
   return r.json();
 }
@@ -483,6 +513,120 @@ document.addEventListener("click", e => {
 $("btnLoadSports").onclick = loadSports;
 $("btnFetch").onclick = fetchOdds;
 
+/* ---------- Coupons ---------- */
+const LEAGUES = [
+  ["soccer_poland_ekstraklasa", "Ekstraklasa", 1], ["soccer_uefa_champs_league", "Liga Mistrzów", 1],
+  ["soccer_uefa_europa_league", "Liga Europy", 0], ["soccer_epl", "Premier League", 1],
+  ["soccer_spain_la_liga", "La Liga", 1], ["soccer_germany_bundesliga", "Bundesliga", 1],
+  ["soccer_italy_serie_a", "Serie A", 1], ["soccer_france_ligue_one", "Ligue 1", 0],
+  ["soccer_netherlands_eredivisie", "Eredivisie", 0], ["basketball_nba", "NBA", 0],
+  ["basketball_euroleague", "Euroliga", 0], ["icehockey_nhl", "NHL", 0]
+];
+const CACHE_MIN = 30;
+function selLeagues() {
+  try { const s = JSON.parse(localStorage.getItem(KEY + "_leagues")); if (Array.isArray(s)) return s; } catch {}
+  return LEAGUES.filter(l => l[2]).map(l => l[0]);
+}
+function renderLeagueChips() {
+  const sel = selLeagues();
+  $("cLeagues").innerHTML = LEAGUES.map(([k, n]) => `<button class="chip ${sel.includes(k) ? "on" : ""}" data-league="${k}">${n}</button>`).join("");
+}
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-league]"); if (!t) return;
+  let sel = selLeagues();
+  sel = sel.includes(t.dataset.league) ? sel.filter(x => x !== t.dataset.league) : [...sel, t.dataset.league];
+  try { localStorage.setItem(KEY + "_leagues", JSON.stringify(sel)); } catch {}
+  renderLeagueChips();
+});
+
+async function getEvents(sport) {
+  const ck = KEY + "_odds_" + sport;
+  try {
+    const c = JSON.parse(localStorage.getItem(ck));
+    if (c && Date.now() - c.ts < CACHE_MIN * 60000) return c.data;
+  } catch {}
+  const data = await api(`/sports/${sport}/odds?regions=eu&markets=h2h&oddsFormat=decimal`);
+  try { localStorage.setItem(ck, JSON.stringify({ts: Date.now(), data})); } catch {}
+  return data;
+}
+
+async function buildCoupons() {
+  const sports = selLeagues();
+  if (!S.settings.apiKey) { $("cInfo").textContent = "Najpierw wklej darmowy klucz The Odds API w Ustawieniach."; show("settings"); return; }
+  if (!sports.length) { $("cInfo").textContent = "Zaznacz przynajmniej jedną ligę."; return; }
+  $("cList").innerHTML = `<div class="card hint">Pobieram kursy (${sports.length} lig)…</div>`;
+  const hours = +$("cHours").value, size = +$("cSize").value, mode = $("cSort").value;
+  const now = Date.now(), until = now + hours * 3600000;
+  const leagueName = Object.fromEntries(LEAGUES.map(l => [l[0], l[1]]));
+  const cands = [];
+  let errors = 0;
+  for (const sp of sports) {
+    let evs;
+    try { evs = await getEvents(sp); } catch (e) { errors++; if (/klucz|401/.test(e.message)) { $("cList").innerHTML = ""; $("cInfo").textContent = e.message; return; } continue; }
+    for (const ev of evs) {
+      const t = new Date(ev.commence_time).getTime();
+      if (t < now + 10 * 60000 || t > until) continue;
+      const a = analyzeEvent(ev); if (!a) continue;
+      // jeden typ na mecz: najbardziej prawdopodobny wynik, który po podatku coś płaci
+      const opts = a.res.map(r => {
+        const odds = r.betclic || r.best.price;
+        const book = r.betclic ? "Betclic" : r.best.book;
+        return {ev, league: leagueName[sp] || sp, pick: r.name, p: r.p, odds, book, ev_: r.p * odds * taxF() - 1, eff: odds * taxF()};
+      }).filter(o => o.eff >= 1.03);
+      if (!opts.length) continue;
+      opts.sort((x, y) => mode === "value" ? y.ev_ - x.ev_ : y.p - x.p);
+      cands.push(opts[0]);
+    }
+  }
+  cands.sort((x, y) => mode === "value" ? y.ev_ - x.ev_ : y.p - x.p);
+  if (!cands.length) { $("cList").innerHTML = `<div class="card hint">Brak meczów w tym oknie czasowym${errors ? " (część lig niedostępna – poza sezonem?)" : ""}.</div>`; return; }
+
+  const coupons = [];
+  const nCoupons = size === 1 ? 8 : 4;
+  for (let i = 0; i + size <= cands.length && coupons.length < nCoupons; i += size) coupons.push(cands.slice(i, i + size));
+  $("cList").innerHTML = coupons.map(renderCoupon).join("") +
+    `<div class="card"><div class="warn">Kupony z największą szansą to nie to samo co zarabiające. Zielony EV = kurs wyższy niż realna szansa (rzadkie). Czerwony = na dłuższą metę tracisz, nawet jeśli ten konkretny kupon wejdzie. Każda dodatkowa pozycja w AKO mnoży też marżę.</div></div>`;
+}
+
+let couponStore = [];
+function renderCoupon(legs) {
+  const p = legs.reduce((a, l) => a * l.p, 1);
+  const odds = legs.reduce((a, l) => a * l.odds, 1);
+  const r = recommend(odds, p, p);
+  const ev = p * odds * taxF() - 1;
+  const bank = bankroll(), free = bank - pendingStake();
+  let stake, note;
+  if (r.type === "stop") { stake = 0; note = r.reason; }
+  else if (r.type === "yes") { stake = r.stake; note = `Plusowa wartość. Stawka z Kelly’ego.`; }
+  else { stake = Math.max(0, Math.floor(Math.min(bank * 0.01, free))); note = `Minusowa wartość — jeśli grasz, to „za zabawę”, max 1% salda.`; }
+  const idx = couponStore.push({legs, p, odds, stake}) - 1;
+  const fmt = l => new Date(l.ev.commence_time).toLocaleString("pl-PL", {weekday: "short", hour: "2-digit", minute: "2-digit"});
+  return `<div class="card">
+    ${legs.map(l => `<div class="leg"><div><b>${esc(l.ev.home_team)} – ${esc(l.ev.away_team)}</b>
+      <div class="m">${esc(l.league)} · ${fmt(l)} · typ: <b style="color:var(--text)">${esc(l.pick)}</b></div></div>
+      <div style="text-align:right;white-space:nowrap">${l.odds.toFixed(2)}<div class="m">${pct(l.p, 0)} · ${esc(l.book)}</div></div></div>`).join("")}
+    <div class="cbig">
+      <div class="stat"><div class="v">${pct(p, 0)}</div><div class="k">szansa wejścia</div></div>
+      <div class="stat"><div class="v">${odds.toFixed(2)}</div><div class="k">kurs łączny</div></div>
+      <div class="stat"><div class="v" style="color:${ev >= 0 ? "var(--green)" : "var(--red)"}">${ev >= 0 ? "+" : ""}${pct(ev)}</div><div class="k">EV po podatku</div></div>
+    </div>
+    <div class="hint">${esc(note)}${stake ? ` Sugerowana stawka: <b style="color:var(--text)">${zl(stake)}</b>, możliwa wygrana ${zl(stake * taxF() * odds)}.` : ""}</div>
+    ${stake ? `<button class="ghost" data-coupon="${idx}">Zagrałem ten kupon</button>` : ""}
+  </div>`;
+}
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-coupon]"); if (!t) return;
+  const c = couponStore[+t.dataset.coupon]; if (!c) return;
+  S.bets.unshift({
+    id: Date.now().toString(36), date: new Date().toISOString(),
+    event: c.legs.map(l => `${l.ev.home_team}–${l.ev.away_team}`).join(" + "),
+    pick: c.legs.map(l => l.pick).join(" + "),
+    odds: c.odds, userP: c.p, marketP: c.p, adjP: c.p, stake: c.stake, status: "pending", settledAt: null
+  });
+  save(); renderAll(); t.textContent = "Zapisano ✓"; t.disabled = true;
+});
+$("btnCoupons").onclick = () => { couponStore = []; buildCoupons(); };
+
 /* ---------- Settings ---------- */
 function fillSettings() {
   const s = S.settings;
@@ -530,7 +674,8 @@ function renderHeader() {
 }
 function renderAll() { renderHeader(); renderBets(); renderStats(); analyze(); }
 
-load(); fillSettings(); renderAll();
+load(); fillSettings(); renderAll(); renderLeagueChips();
+show(S.settings.apiKey ? "coupons" : "analyze");
 try { const c = localStorage.getItem(KEY + "_sports"); if (c) $("mSport").innerHTML = c; } catch {}
 if (!localStorage.getItem(KEY)) show("settings");
 </script>

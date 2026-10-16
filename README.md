@@ -9,6 +9,8 @@ Mobilna apka (jedna strona HTML) do zarządzania budżetem na zakłady.
 - **Uczenie się** – po każdym rozliczonym zakładzie dopasowuje, na ile ufać Twoim ocenom względem rynku.
 - **Limity** – ułamkowy Kelly, maks. stawka, stop-loss, dzienny limit straty.
 
+Instalacja na telefonie: otwórz https://karycha.github.io/bet/ → menu przeglądarki → „Dodaj do ekranu głównego”. Plan rozwoju: [ROADMAP.md](ROADMAP.md).
+
 Dane zostają w `localStorage` przeglądarki. Brak backendu.
 
 > Nie ma metody, która gwarantuje wygrywanie. Większość graczy traci na dłuższą metę.

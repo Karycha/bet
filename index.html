@@ -62,7 +62,12 @@ nav button{flex:1;margin:0;border-radius:0;background:none;color:var(--mute);fon
 .cal .d.has{color:var(--text)}.cal .d.has .dot{background:var(--blue)}
 .cal .d.won .dot{background:var(--green)}.cal .d.lost .dot{background:var(--red)}.cal .d.pend .dot{background:var(--yellow)}
 .cal .d.today{border-color:var(--blue)}.cal .d.sel{background:#16314f;color:var(--text)}
-.cal .d.past{opacity:.45}.cal .e{visibility:hidden}
+.cal .d.past{opacity:.45}
+table.t{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+table.t th{color:var(--mute);font-weight:500;text-align:right;padding:5px 4px;border-bottom:1px solid var(--line)}
+table.t td{text-align:right;padding:6px 4px;border-bottom:1px solid var(--line)}
+table.t th:first-child,table.t td:first-child{text-align:left}
+h3{font-size:14px;margin:14px 0 2px}.cal .e{visibility:hidden}
 nav button.on{color:var(--blue)}
 .hidden{display:none}
 .toggle{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
@@ -175,6 +180,10 @@ svg{width:100%;height:auto;display:block}
     <h2>Jak Ci idzie</h2>
     <div class="grid" id="statGrid"></div>
     <div id="chart" style="margin-top:12px"></div>
+  </div>
+  <div class="card">
+    <h2>Gdzie zarabiasz, gdzie tracisz</h2>
+    <div id="breakdown"></div>
   </div>
   <div class="card">
     <h2>Korekta Twoich ocen</h2>
@@ -489,6 +498,8 @@ function renderStats() {
     $("chart").innerHTML = `<svg viewBox="0 0 ${W} ${H}"><line x1="0" x2="${W}" y1="${y(S.settings.start)}" y2="${y(S.settings.start)}" stroke="var(--line)" stroke-dasharray="4 4"/><path d="${d}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round"/></svg><div class="hint">Przerywana linia = budżet startowy.</div>`;
   }
 
+  renderBreakdown(done);
+
   const c = fitK();
   let txt;
   if (c.n < 5) txt = `Za mało danych (${c.n} rozliczonych). Na razie apka bierze Twoją ocenę w połowie, a w połowie ocenę rynku. Po ok. 20–30 zakładach zacznie się sensownie dopasowywać.`;
@@ -499,6 +510,38 @@ function renderStats() {
       ${better ? "Na razie trafiasz lepiej niż kursy. Przy małej próbie to może być szczęście." : "Rynek ocenia lepiej niż Ty — dlatego apka coraz mocniej przesuwa Twoje oceny w stronę kursów i rzadziej mówi „graj”."}`;
   }
   $("calib").innerHTML = `<div class="hint" style="font-size:14px;color:var(--text)">${txt}</div>`;
+}
+
+/* ---------- v1.3 Rozbicie statystyk ---------- */
+function groupTable(rows, groupFn, order, title) {
+  const g = {};
+  rows.forEach(b => { const k = groupFn(b); (g[k] = g[k] || []).push(b); });
+  const keys = order.filter(k => g[k]);
+  if (!keys.length) return "";
+  const tr = keys.map(k => {
+    const list = g[k], st = list.reduce((a, b) => a + b.stake, 0), pl = list.reduce((a, b) => a + profitOf(b), 0);
+    const w = list.filter(b => b.status === "won").length;
+    return `<tr><td>${k}</td><td>${list.length}</td><td>${pct(w / list.length, 0)}</td><td style="color:${pl >= 0 ? "var(--green)" : "var(--red)"}">${pl >= 0 ? "+" : ""}${zl(pl)}</td><td>${st ? pct(pl / st, 0) : "–"}</td></tr>`;
+  }).join("");
+  return `<h3>${title}</h3><table class="t"><tr><th></th><th>Zakł.</th><th>Traf.</th><th>Wynik</th><th>ROI</th></tr>${tr}</table>`;
+}
+function renderBreakdown(done) {
+  if (done.length < 3) { $("breakdown").innerHTML = `<div class="hint">Pojawi się po kilku rozliczonych zakładach.</div>`; return; }
+  const srcName = {dzien: "Kupon dnia", kupony: "Kupony", analiza: "Analiza"};
+  const bucket = o => o < 1.5 ? "< 1.50" : o < 2 ? "1.50–1.99" : o < 3 ? "2.00–2.99" : "3.00+";
+  const pb = b => { const p = b.adjP || b.marketP || 0; return p < 0.4 ? "< 40%" : p < 0.55 ? "40–55%" : p < 0.7 ? "55–70%" : "70%+"; };
+  let html = groupTable(done, b => srcName[b.src] || "Inne", ["Kupon dnia", "Kupony", "Analiza", "Inne"], "Wg źródła");
+  html += groupTable(done, b => bucket(b.odds), ["< 1.50", "1.50–1.99", "2.00–2.99", "3.00+"], "Wg kursu");
+  // kalibracja
+  const g = {};
+  done.forEach(b => { const k = pb(b); (g[k] = g[k] || []).push(b); });
+  const rows = ["< 40%", "40–55%", "55–70%", "70%+"].filter(k => g[k]).map(k => {
+    const l = g[k], exp = l.reduce((a, b) => a + (b.adjP || b.marketP || 0), 0) / l.length, act = l.filter(b => b.status === "won").length / l.length;
+    return `<tr><td>${k}</td><td>${l.length}</td><td>${pct(exp, 0)}</td><td style="color:${act >= exp ? "var(--green)" : "var(--red)"}">${pct(act, 0)}</td></tr>`;
+  }).join("");
+  html += `<h3>Kalibracja szans</h3><table class="t"><tr><th>Przewidywana</th><th>Zakł.</th><th>Średnio</th><th>Faktycznie</th></tr>${rows}</table>
+    <div class="hint">Jeśli „faktycznie” jest stale niżej niż „średnio”, szanse są przeszacowane. Przy małej liczbie zakładów różnice to głównie przypadek.</div>`;
+  $("breakdown").innerHTML = html;
 }
 
 /* ---------- Market tab (The Odds API) ---------- */

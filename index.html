@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<link rel="manifest" href="manifest.json">
+<title>Bet Doradca</title>
+<style>
+:root{
+  --bg:#0f1115;--card:#181b22;--card2:#20242d;--line:#2b303b;--text:#e8eaf0;--mute:#8b93a5;
+  --green:#3ddc84;--red:#ff5d5d;--yellow:#ffc857;--blue:#5aa9ff;--r:14px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 -apple-system,system-ui,Segoe UI,Roboto,sans-serif}
+body{padding:0 0 84px}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:14px 16px 10px;border-bottom:1px solid var(--line)}
+header h1{margin:0;font-size:18px}
+.bank{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap}
+.pill{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:13px;color:var(--mute)}
+.pill b{color:var(--text)}
+main{padding:12px 16px;max-width:640px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.card h2{margin:0 0 10px;font-size:16px}
+label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
+input,select{width:100%;background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-size:16px}
+.row{display:flex;gap:8px}.row>*{flex:1}
+button{background:var(--blue);color:#081220;border:0;border-radius:10px;padding:12px 14px;font-size:15px;font-weight:600;width:100%;margin-top:12px}
+button.ghost{background:var(--card2);color:var(--text);border:1px solid var(--line)}
+button.sm{width:auto;padding:7px 11px;font-size:13px;margin:0}
+button.g{background:var(--green)}button.r{background:var(--red)}
+.hint{font-size:12.5px;color:var(--mute);margin-top:6px}
+.verdict{border-radius:12px;padding:14px;margin-top:12px;font-weight:600}
+.verdict.no{background:#3a1d22;color:#ffb3b3}
+.verdict.yes{background:#173826;color:#a6f3c5}
+.verdict.stop{background:#3a321a;color:#ffe39a}
+.verdict .big{font-size:24px;display:block;margin:4px 0}
+.verdict small{font-weight:400;display:block;color:inherit;opacity:.85}
+.bet{border-top:1px solid var(--line);padding:10px 0}
+.bet:first-child{border-top:0}
+.bet .t{display:flex;justify-content:space-between;gap:8px}
+.bet .m{font-size:12.5px;color:var(--mute)}
+.bet .acts{display:flex;gap:6px;margin-top:8px}
+.st-won{color:var(--green)}.st-lost{color:var(--red)}.st-void,.st-pending{color:var(--mute)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{background:var(--card2);border-radius:10px;padding:10px}
+.stat .v{font-size:20px;font-weight:700}.stat .k{font-size:12px;color:var(--mute)}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#12151b;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;margin:0;border-radius:0;background:none;color:var(--mute);font-weight:500;padding:14px 4px;font-size:13px}
+nav button.on{color:var(--blue)}
+.hidden{display:none}
+.toggle{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+.toggle input{width:auto;transform:scale(1.3)}
+.ev{padding:10px;border:1px solid var(--line);border-radius:10px;margin-top:8px}
+.tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:999px;background:var(--card2);color:var(--mute);margin-left:4px}
+.tag.v{background:#173826;color:var(--green)}
+svg{width:100%;height:auto;display:block}
+.warn{border-left:3px solid var(--yellow);padding-left:10px;font-size:13px;color:var(--mute)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Bet Doradca</h1>
+  <div class="bank">
+    <span class="pill">Saldo <b id="hBank">–</b></span>
+    <span class="pill">Wolne <b id="hFree">–</b></span>
+    <span class="pill">Wynik <b id="hPL">–</b></span>
+  </div>
+</header>
+
+<main>
+<!-- ============ ANALIZA ============ -->
+<section id="tab-analyze">
+  <div class="card">
+    <h2>Czy to obstawić?</h2>
+    <label>Mecz / wydarzenie</label>
+    <input id="fEvent" placeholder="np. Legia – Lech">
+    <label>Twój typ</label>
+    <input id="fPick" placeholder="np. 1, Over 2.5, BTTS">
+    <div class="row">
+      <div><label>Kurs na Twój typ</label><input id="fOdds" type="number" step="0.01" inputmode="decimal" placeholder="2.10"></div>
+      <div><label>Pozostałe kursy rynku</label><input id="fOther" placeholder="3.40, 3.60" inputmode="decimal"></div>
+    </div>
+    <div class="hint">Wpisz kursy pozostałych wyników z tego samego rynku (np. X i 2). Dzięki temu apka zdejmie marżę bukmachera i policzy, co rynek naprawdę myśli.</div>
+    <label>Twoja szansa, że wejdzie (%)</label>
+    <input id="fProb" type="number" step="1" inputmode="numeric" placeholder="np. 55">
+    <div class="hint">Szczerze. Apka i tak skoryguje to po Twoich wynikach.</div>
+    <div id="verdict"></div>
+    <button id="btnPlace" class="g hidden">Zapisz zakład</button>
+  </div>
+  <div class="card">
+    <div class="warn">Bukmacher ma przewagę (marża + w PL zwykle 12% podatku od stawki). Apka nie zgaduje wyników — mówi, kiedy kurs jest wart gry wg Twojej oceny, ile postawić i kiedy przestać. Najczęstszy werdykt to „nie graj” i to jest poprawne.</div>
+  </div>
+</section>
+
+<!-- ============ RYNEK ============ -->
+<section id="tab-market" class="hidden">
+  <div class="card">
+    <h2>Kursy na świecie</h2>
+    <div class="hint">Pobiera kursy wielu bukmacherów z The Odds API (darmowy klucz: the-odds-api.com, 500 zapytań/mies.). Liczy „uczciwą” szansę z konsensusu rynku i pokazuje, gdzie jakiś kurs jest wyraźnie powyżej niej.</div>
+    <label>Liga</label>
+    <select id="mSport"><option value="">— najpierw dodaj klucz w Ustawieniach —</option></select>
+    <button id="btnLoadSports" class="ghost">Odśwież listę lig</button>
+    <button id="btnFetch">Pobierz kursy</button>
+    <div id="mInfo" class="hint"></div>
+  </div>
+  <div id="mList"></div>
+</section>
+
+<!-- ============ ZAKŁADY ============ -->
+<section id="tab-bets" class="hidden">
+  <div class="card">
+    <h2>Otwarte</h2>
+    <div id="openList"></div>
+  </div>
+  <div class="card">
+    <h2>Historia</h2>
+    <div id="histList"></div>
+  </div>
+</section>
+
+<!-- ============ STATY ============ -->
+<section id="tab-stats" class="hidden">
+  <div class="card">
+    <h2>Jak Ci idzie</h2>
+    <div class="grid" id="statGrid"></div>
+    <div id="chart" style="margin-top:12px"></div>
+  </div>
+  <div class="card">
+    <h2>Korekta Twoich ocen</h2>
+    <div id="calib"></div>
+  </div>
+</section>
+
+<!-- ============ USTAWIENIA ============ -->
+<section id="tab-settings" class="hidden">
+  <div class="card">
+    <h2>Budżet i limity</h2>
+    <label>Budżet startowy (zł)</label>
+    <input id="sStart" type="number" inputmode="decimal">
+    <label>Część Kelly’ego (0.1–0.5)</label>
+    <input id="sKelly" type="number" step="0.05" inputmode="decimal">
+    <div class="hint">0.25 = ćwierć Kelly. Bezpieczniej i mniejsze wahania. Pełny Kelly przy błędnych ocenach szybko czyści konto.</div>
+    <label>Maks. stawka (% salda)</label>
+    <input id="sMax" type="number" step="0.5" inputmode="decimal">
+    <label>Minimalna przewaga, żeby grać (%)</label>
+    <input id="sEdge" type="number" step="0.5" inputmode="decimal">
+    <label>Stop-loss: koniec gry, gdy saldo spadnie o (%)</label>
+    <input id="sStop" type="number" step="5" inputmode="numeric">
+    <label>Dzienny limit straty (zł)</label>
+    <input id="sDaily" type="number" inputmode="decimal">
+    <div class="toggle"><span>Podatek 12% od stawki</span><input id="sTax" type="checkbox"></div>
+    <div class="hint">Wyłącz, jeśli Twój bukmacher akurat pokrywa podatek za Ciebie.</div>
+    <label>Klucz The Odds API (opcjonalnie)</label>
+    <input id="sKey" placeholder="wklej klucz">
+    <button id="btnSave">Zapisz</button>
+  </div>
+  <div class="card">
+    <h2>Dane</h2>
+    <div class="hint">Wszystko jest zapisane tylko w tej przeglądarce na tym telefonie.</div>
+    <div class="row">
+      <button id="btnExport" class="ghost">Eksport</button>
+      <button id="btnImport" class="ghost">Import</button>
+    </div>
+    <button id="btnReset" class="r">Wyczyść wszystko</button>
+    <input id="fileIn" type="file" accept="application/json" class="hidden">
+  </div>
+</section>
+</main>
+
+<nav>
+  <button data-tab="analyze" class="on">Analiza</button>
+  <button data-tab="market">Rynek</button>
+  <button data-tab="bets">Zakłady</button>
+  <button data-tab="stats">Statystyki</button>
+  <button data-tab="settings">Ustawienia</button>
+</nav>
+
+<script>
+"use strict";
+const KEY = "betdoradca_v1";
+const $ = id => document.getElementById(id);
+const zl = n => (Math.round(n * 100) / 100).toLocaleString("pl-PL", {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " zł";
+const pct = (n, d = 1) => (n * 100).toFixed(d) + "%";
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+const DEFAULTS = {
+  settings: {start: 500, kelly: 0.25, maxPct: 3, edge: 3, stop: 30, daily: 50, tax: true, apiKey: ""},
+  bets: []
+};
+
+let S;
+function load() {
+  try { S = JSON.parse(localStorage.getItem(KEY)) || null; } catch { S = null; }
+  if (!S) S = structuredClone(DEFAULTS);
+  S.settings = {...DEFAULTS.settings, ...S.settings};
+  S.bets = S.bets || [];
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} }
+
+/* ---------- Money ---------- */
+const taxF = () => S.settings.tax ? 0.88 : 1;
+function profitOf(b) {
+  if (b.status === "won") return b.stake * taxF() * b.odds - b.stake;
+  if (b.status === "lost") return -b.stake;
+  return 0; // void/pending
+}
+function bankroll() { return S.settings.start + S.bets.reduce((a, b) => a + profitOf(b), 0); }
+function pendingStake() { return S.bets.filter(b => b.status === "pending").reduce((a, b) => a + b.stake, 0); }
+function todayLoss() {
+  const d = new Date().toDateString();
+  const pl = S.bets.filter(b => b.settledAt && new Date(b.settledAt).toDateString() === d).reduce((a, b) => a + profitOf(b), 0);
+  return Math.max(0, -pl);
+}
+
+/* ---------- Market probability (margin removal) ---------- */
+function marketProb(odds, others) {
+  const all = [odds, ...others].filter(o => o > 1);
+  if (others.length === 0) {
+    // brak pozostałych kursów: zakładamy typową marżę 6%
+    return {p: (1 / odds) / 1.06, margin: null};
+  }
+  const sum = all.reduce((a, o) => a + 1 / o, 0);
+  return {p: (1 / odds) / sum, margin: sum - 1};
+}
+
+/* ---------- Learning: how much to trust user vs market ---------- */
+// p_adj = p_market + k * (p_user - p_market). k fitted on settled bets by log-loss, shrunk to prior 0.5.
+function fitK() {
+  const done = S.bets.filter(b => (b.status === "won" || b.status === "lost") && b.userP && b.marketP);
+  const n = done.length;
+  if (n === 0) return {k: 0.5, n: 0, fitted: null, brierU: null, brierM: null};
+  let bestK = 0.5, best = Infinity;
+  for (let k = 0; k <= 1.0001; k += 0.05) {
+    let ll = 0;
+    for (const b of done) {
+      const p = clamp(b.marketP + k * (b.userP - b.marketP), 0.01, 0.99);
+      ll -= b.status === "won" ? Math.log(p) : Math.log(1 - p);
+    }
+    if (ll < best) { best = ll; bestK = k; }
+  }
+  const prior = 10;
+  const k = (n * bestK + prior * 0.5) / (n + prior);
+  const y = b => b.status === "won" ? 1 : 0;
+  const brierU = done.reduce((a, b) => a + (b.userP - y(b)) ** 2, 0) / n;
+  const brierM = done.reduce((a, b) => a + (b.marketP - y(b)) ** 2, 0) / n;
+  return {k, n, fitted: bestK, brierU, brierM};
+}
+
+/* ---------- Recommendation ---------- */
+function recommend(odds, userP, mP) {
+  const st = S.settings;
+  const bank = bankroll();
+  const free = bank - pendingStake();
+  const {k} = fitK();
+  const adjP = clamp(mP + k * (userP - mP), 0.01, 0.99);
+  const effOdds = odds * taxF();
+  const ev = adjP * effOdds - 1;
+  const out = {adjP, ev, effOdds, k, stake: 0, type: "no", reason: ""};
+
+  if (bank <= st.start * (1 - st.stop / 100)) {
+    out.type = "stop"; out.reason = `Stop-loss: saldo spadło o ponad ${st.stop}% budżetu. Koniec gry. Zrób przerwę i nie dokładaj pieniędzy.`; return out;
+  }
+  if (todayLoss() >= st.daily) {
+    out.type = "stop"; out.reason = `Dzienny limit straty (${zl(st.daily)}) osiągnięty. Wróć jutro.`; return out;
+  }
+  if (ev < st.edge / 100) {
+    out.reason = ev < 0
+      ? `Oczekiwana strata ${pct(-ev)} na każdej złotówce. Kurs za niski względem realnej szansy.`
+      : `Przewaga tylko ${pct(ev)} — poniżej Twojego progu ${st.edge}%. Za mało, żeby to miało sens.`;
+    return out;
+  }
+  const f = (adjP * effOdds - 1) / (effOdds - 1);
+  let stake = free * f * st.kelly;
+  stake = Math.min(stake, bank * st.maxPct / 100, free);
+  stake = Math.floor(stake);
+  if (stake < 2) { out.reason = "Przewaga jest, ale wyliczona stawka wychodzi poniżej 2 zł. Odpuść."; return out; }
+  out.type = "yes"; out.stake = stake;
+  out.reason = `Przewaga ${pct(ev)}. Stawka z ${st.kelly} Kelly, przy obecnym saldzie.`;
+  return out;
+}
+
+/* ---------- Analyze tab ---------- */
+let lastRec = null;
+function parseOthers(s) { return (s || "").split(/[,;\s]+/).map(x => parseFloat(x.replace(",", "."))).filter(x => x > 1); }
+function analyze() {
+  const odds = parseFloat(($("fOdds").value || "").replace(",", "."));
+  const up = parseFloat($("fProb").value) / 100;
+  const v = $("verdict");
+  $("btnPlace").classList.add("hidden");
+  lastRec = null;
+  if (!(odds > 1)) { v.innerHTML = ""; return; }
+  const others = parseOthers($("fOther").value);
+  const m = marketProb(odds, others);
+  const userP = up > 0 && up < 1 ? up : m.p;
+  const r = recommend(odds, userP, m.p);
+  lastRec = {odds, userP, marketP: m.p, ...r};
+  const marginTxt = m.margin === null ? "marża założona ~6%" : `marża bukmachera ${pct(m.margin)}`;
+  const info = `<small>Rynek: ${pct(m.p)} (${marginTxt}) · Ty: ${pct(userP)} · Po korekcie: <b>${pct(r.adjP)}</b><br>Kurs po podatku: ${r.effOdds.toFixed(2)} · Zaufanie do Twoich ocen: ${pct(r.k, 0)}</small>`;
+  if (r.type === "yes") {
+    v.innerHTML = `<div class="verdict yes">GRAJ<span class="big">${zl(r.stake)}</span>${esc(r.reason)}${info}</div>`;
+    $("btnPlace").classList.remove("hidden");
+  } else if (r.type === "stop") {
+    v.innerHTML = `<div class="verdict stop">STOP<small>${esc(r.reason)}</small></div>`;
+  } else {
+    v.innerHTML = `<div class="verdict no">NIE GRAJ<small>${esc(r.reason)}</small>${info}</div>`;
+  }
+}
+["fOdds", "fOther", "fProb"].forEach(id => $(id).addEventListener("input", analyze));
+$("btnPlace").onclick = () => {
+  if (!lastRec || lastRec.type !== "yes") return;
+  S.bets.unshift({
+    id: Date.now().toString(36), date: new Date().toISOString(),
+    event: $("fEvent").value.trim() || "Zakład", pick: $("fPick").value.trim(),
+    odds: lastRec.odds, userP: lastRec.userP, marketP: lastRec.marketP, adjP: lastRec.adjP,
+    stake: lastRec.stake, status: "pending", settledAt: null
+  });
+  save();
+  ["fEvent", "fPick", "fOdds", "fOther", "fProb"].forEach(id => $(id).value = "");
+  $("verdict").innerHTML = ""; $("btnPlace").classList.add("hidden");
+  renderAll(); show("bets");
+};
+
+/* ---------- Bets tab ---------- */
+function betRow(b, open) {
+  const pl = profitOf(b);
+  const stTxt = {pending: "w grze", won: "wygrany", lost: "przegrany", void: "zwrot"}[b.status];
+  return `<div class="bet">
+    <div class="t"><b>${esc(b.event)}</b><span class="st-${b.status}">${b.status === "pending" ? zl(b.stake) : (pl >= 0 ? "+" : "") + zl(pl)}</span></div>
+    <div class="m">${esc(b.pick)} @ ${b.odds.toFixed(2)} · stawka ${zl(b.stake)} · ${stTxt} · ${new Date(b.date).toLocaleDateString("pl-PL")}</div>
+    ${open ? `<div class="acts">
+      <button class="sm g" data-act="won" data-id="${b.id}">Wygrany</button>
+      <button class="sm r" data-act="lost" data-id="${b.id}">Przegrany</button>
+      <button class="sm ghost" data-act="void" data-id="${b.id}">Zwrot</button>
+    </div>` : `<div class="acts"><button class="sm ghost" data-act="pending" data-id="${b.id}">Cofnij</button><button class="sm ghost" data-act="del" data-id="${b.id}">Usuń</button></div>`}
+  </div>`;
+}
+function renderBets() {
+  const open = S.bets.filter(b => b.status === "pending");
+  const hist = S.bets.filter(b => b.status !== "pending");
+  $("openList").innerHTML = open.length ? open.map(b => betRow(b, true)).join("") : `<div class="hint">Brak otwartych zakładów.</div>`;
+  $("histList").innerHTML = hist.length ? hist.map(b => betRow(b, false)).join("") : `<div class="hint">Jeszcze nic rozliczonego.</div>`;
+}
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-act]"); if (!t) return;
+  const b = S.bets.find(x => x.id === t.dataset.id); if (!b) return;
+  const a = t.dataset.act;
+  if (a === "del") { if (!confirm("Usunąć ten zakład?")) return; S.bets = S.bets.filter(x => x !== b); }
+  else { b.status = a; b.settledAt = a === "pending" ? null : new Date().toISOString(); }
+  save(); renderAll();
+});
+
+/* ---------- Stats ---------- */
+function renderStats() {
+  const done = S.bets.filter(b => b.status === "won" || b.status === "lost");
+  const staked = done.reduce((a, b) => a + b.stake, 0);
+  const pl = done.reduce((a, b) => a + profitOf(b), 0);
+  const wins = done.filter(b => b.status === "won").length;
+  const expWins = done.reduce((a, b) => a + (b.adjP || b.marketP || 0), 0);
+  const stats = [
+    ["Zakłady", done.length], ["Trafione", done.length ? `${wins} (${pct(wins / done.length, 0)})` : "–"],
+    ["Postawione", zl(staked)], ["ROI", staked ? pct(pl / staked) : "–"],
+    ["Oczekiwane trafienia", done.length ? expWins.toFixed(1) : "–"], ["Saldo", zl(bankroll())]
+  ];
+  $("statGrid").innerHTML = stats.map(([k, v]) => `<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`).join("");
+
+  // bankroll chart
+  const series = [S.settings.start];
+  const settled = [...S.bets].filter(b => b.settledAt && b.status !== "void").sort((a, b) => a.settledAt.localeCompare(b.settledAt));
+  let cur = S.settings.start;
+  settled.forEach(b => { cur += profitOf(b); series.push(cur); });
+  if (series.length < 2) { $("chart").innerHTML = `<div class="hint">Wykres salda pojawi się po pierwszych rozliczonych zakładach.</div>`; }
+  else {
+    const W = 600, H = 180, P = 8;
+    const lo = Math.min(...series, S.settings.start), hi = Math.max(...series, S.settings.start);
+    const span = hi - lo || 1;
+    const x = i => P + i * (W - 2 * P) / (series.length - 1);
+    const y = v => H - P - (v - lo) * (H - 2 * P) / span;
+    const d = series.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+    const col = cur >= S.settings.start ? "var(--green)" : "var(--red)";
+    $("chart").innerHTML = `<svg viewBox="0 0 ${W} ${H}"><line x1="0" x2="${W}" y1="${y(S.settings.start)}" y2="${y(S.settings.start)}" stroke="var(--line)" stroke-dasharray="4 4"/><path d="${d}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round"/></svg><div class="hint">Przerywana linia = budżet startowy.</div>`;
+  }
+
+  const c = fitK();
+  let txt;
+  if (c.n < 5) txt = `Za mało danych (${c.n} rozliczonych). Na razie apka bierze Twoją ocenę w połowie, a w połowie ocenę rynku. Po ok. 20–30 zakładach zacznie się sensownie dopasowywać.`;
+  else {
+    const better = c.brierU < c.brierM;
+    txt = `Na podstawie ${c.n} zakładów apka ufa Twoim ocenom w <b>${pct(c.k, 0)}</b> (reszta to rynek).<br>
+      Błąd Twoich ocen (Brier): <b>${c.brierU.toFixed(3)}</b> vs rynek: <b>${c.brierM.toFixed(3)}</b> — niżej = lepiej.<br>
+      ${better ? "Na razie trafiasz lepiej niż kursy. Przy małej próbie to może być szczęście." : "Rynek ocenia lepiej niż Ty — dlatego apka coraz mocniej przesuwa Twoje oceny w stronę kursów i rzadziej mówi „graj”."}`;
+  }
+  $("calib").innerHTML = `<div class="hint" style="font-size:14px;color:var(--text)">${txt}</div>`;
+}
+
+/* ---------- Market tab (The Odds API) ---------- */
+const API = "https://api.the-odds-api.com/v4";
+async function api(path) {
+  const key = S.settings.apiKey;
+  if (!key) throw new Error("Dodaj klucz API w Ustawieniach.");
+  const r = await fetch(`${API}${path}${path.includes("?") ? "&" : "?"}apiKey=${encodeURIComponent(key)}`);
+  const left = r.headers.get("x-requests-remaining");
+  if (left) $("mInfo").textContent = `Pozostało zapytań w tym miesiącu: ${left}`;
+  if (!r.ok) throw new Error(`Błąd API (${r.status}). Sprawdź klucz.`);
+  return r.json();
+}
+async function loadSports() {
+  try {
+    const sports = await api("/sports");
+    const pref = ["soccer_poland_ekstraklasa", "soccer_uefa_champs_league", "soccer_epl", "soccer_spain_la_liga", "soccer_germany_bundesliga", "soccer_italy_serie_a", "basketball_nba", "icehockey_nhl", "tennis_atp"];
+    const list = sports.filter(s => s.active && !s.has_outrights)
+      .sort((a, b) => ((pref.indexOf(a.key) + 1 || 99) - (pref.indexOf(b.key) + 1 || 99)) || a.title.localeCompare(b.title));
+    $("mSport").innerHTML = list.map(s => `<option value="${esc(s.key)}">${esc(s.title)} (${esc(s.group)})</option>`).join("");
+    try { localStorage.setItem(KEY + "_sports", $("mSport").innerHTML); } catch {}
+  } catch (e) { $("mInfo").textContent = e.message; }
+}
+async function fetchOdds() {
+  const sport = $("mSport").value;
+  if (!sport) { $("mInfo").textContent = "Wybierz ligę (albo dodaj klucz i odśwież listę)."; return; }
+  $("mList").innerHTML = `<div class="card hint">Ładowanie…</div>`;
+  try {
+    const events = await api(`/sports/${sport}/odds?regions=eu&markets=h2h&oddsFormat=decimal`);
+    const rows = events.map(analyzeEvent).filter(Boolean).sort((a, b) => b.bestEdge - a.bestEdge);
+    if (!rows.length) { $("mList").innerHTML = `<div class="card hint">Brak meczów z kursami.</div>`; return; }
+    $("mList").innerHTML = rows.map(renderEvent).join("");
+  } catch (e) { $("mList").innerHTML = ""; $("mInfo").textContent = e.message; }
+}
+function analyzeEvent(ev) {
+  const books = ev.bookmakers || [];
+  if (books.length < 3) return null;
+  const names = new Set();
+  books.forEach(b => b.markets?.[0]?.outcomes.forEach(o => names.add(o.name)));
+  const outcomes = [...names];
+  // consensus: Pinnacle if present (najostrzejszy rynek), else average of de-margined books
+  const fairFrom = bk => {
+    const o = bk.markets?.[0]?.outcomes; if (!o || o.length !== outcomes.length) return null;
+    const s = o.reduce((a, x) => a + 1 / x.price, 0);
+    return Object.fromEntries(o.map(x => [x.name, (1 / x.price) / s]));
+  };
+  const pin = books.find(b => b.key === "pinnacle");
+  let fair = pin && fairFrom(pin);
+  if (!fair) {
+    const fs = books.map(fairFrom).filter(Boolean);
+    if (!fs.length) return null;
+    fair = Object.fromEntries(outcomes.map(n => [n, fs.reduce((a, f) => a + (f[n] || 0), 0) / fs.length]));
+  }
+  const res = outcomes.map(n => {
+    let best = null, betclic = null;
+    books.forEach(b => {
+      const o = b.markets?.[0]?.outcomes.find(x => x.name === n); if (!o) return;
+      if (!best || o.price > best.price) best = {price: o.price, book: b.title};
+      if (b.key.startsWith("betclic")) betclic = o.price;
+    });
+    const edge = fair[n] * best.price * taxF() - 1;
+    const edgeBc = betclic ? fair[n] * betclic * taxF() - 1 : null;
+    return {name: n, p: fair[n], best, betclic, edge, edgeBc};
+  });
+  return {ev, res, bestEdge: Math.max(...res.map(r => r.edgeBc ?? -1)), pin: !!pin, n: books.length};
+}
+function renderEvent({ev, res, pin, n}) {
+  const when = new Date(ev.commence_time).toLocaleString("pl-PL", {weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"});
+  const edgeMin = S.settings.edge / 100;
+  return `<div class="card">
+    <b>${esc(ev.home_team)} – ${esc(ev.away_team)}</b>
+    <div class="hint">${when} · ${n} bukmacherów · szansa z ${pin ? "Pinnacle" : "średniej rynku"}</div>
+    ${res.map(r => `<div class="ev">
+      <div class="t" style="display:flex;justify-content:space-between"><b>${esc(r.name)}</b><span>${pct(r.p)}</span></div>
+      <div class="hint">Uczciwy kurs ${(1 / r.p).toFixed(2)} · Betclic ${r.betclic ? r.betclic.toFixed(2) : "brak"}
+        ${r.edgeBc !== null ? `<span class="tag ${r.edgeBc >= edgeMin ? "v" : ""}">${r.edgeBc >= 0 ? "+" : ""}${pct(r.edgeBc)}</span>` : ""}
+        <br>Najlepszy: ${r.best.price.toFixed(2)} (${esc(r.best.book)}) <span class="tag ${r.edge >= edgeMin ? "v" : ""}">${r.edge >= 0 ? "+" : ""}${pct(r.edge)}</span></div>
+      <button class="sm ghost" style="margin-top:6px" data-fill='${esc(JSON.stringify({e: ev.home_team + " – " + ev.away_team, k: r.name, o: r.betclic || r.best.price, p: Math.round(r.p * 100), others: res.filter(x => x !== r).map(x => x.betclic || x.best.price)}))}'>Analizuj</button>
+    </div>`).join("")}
+  </div>`;
+}
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-fill]"); if (!t) return;
+  const d = JSON.parse(t.dataset.fill);
+  $("fEvent").value = d.e; $("fPick").value = d.k; $("fOdds").value = d.o;
+  $("fOther").value = d.others.map(x => x.toFixed(2)).join(", "); $("fProb").value = d.p;
+  show("analyze"); analyze(); window.scrollTo(0, 0);
+});
+$("btnLoadSports").onclick = loadSports;
+$("btnFetch").onclick = fetchOdds;
+
+/* ---------- Settings ---------- */
+function fillSettings() {
+  const s = S.settings;
+  $("sStart").value = s.start; $("sKelly").value = s.kelly; $("sMax").value = s.maxPct;
+  $("sEdge").value = s.edge; $("sStop").value = s.stop; $("sDaily").value = s.daily;
+  $("sTax").checked = s.tax; $("sKey").value = s.apiKey;
+}
+$("btnSave").onclick = () => {
+  const n = (id, d, lo, hi) => { const v = parseFloat(($(id).value || "").replace(",", ".")); return isFinite(v) ? clamp(v, lo, hi) : d; };
+  const s = S.settings;
+  s.start = n("sStart", s.start, 1, 1e7); s.kelly = n("sKelly", s.kelly, 0.05, 1);
+  s.maxPct = n("sMax", s.maxPct, 0.5, 25); s.edge = n("sEdge", s.edge, 0, 50);
+  s.stop = n("sStop", s.stop, 5, 100); s.daily = n("sDaily", s.daily, 1, 1e7);
+  s.tax = $("sTax").checked; s.apiKey = $("sKey").value.trim();
+  save(); fillSettings(); renderAll();
+  $("btnSave").textContent = "Zapisano ✓"; setTimeout(() => $("btnSave").textContent = "Zapisz", 1200);
+  if (s.apiKey && !$("mSport").value) loadSports();
+};
+$("btnExport").onclick = () => {
+  const blob = new Blob([JSON.stringify(S, null, 2)], {type: "application/json"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "bet-doradca.json"; a.click();
+};
+$("btnImport").onclick = () => $("fileIn").click();
+$("fileIn").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try { const d = JSON.parse(await f.text()); if (!d.settings || !Array.isArray(d.bets)) throw 0; localStorage.setItem(KEY, JSON.stringify(d)); load(); save(); fillSettings(); renderAll(); alert("Zaimportowano."); }
+  catch { alert("Zły plik."); }
+};
+$("btnReset").onclick = () => { if (confirm("Na pewno usunąć wszystkie dane?")) { S = structuredClone(DEFAULTS); save(); fillSettings(); renderAll(); } };
+
+/* ---------- Nav ---------- */
+function show(tab) {
+  document.querySelectorAll("main>section").forEach(s => s.classList.toggle("hidden", s.id !== "tab-" + tab));
+  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.tab === tab));
+  if (tab === "stats") renderStats();
+}
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => show(b.dataset.tab));
+
+function renderHeader() {
+  const bank = bankroll(), pl = bank - S.settings.start;
+  $("hBank").textContent = zl(bank);
+  $("hFree").textContent = zl(bank - pendingStake());
+  $("hPL").textContent = (pl >= 0 ? "+" : "") + zl(pl);
+  $("hPL").style.color = pl >= 0 ? "var(--green)" : "var(--red)";
+}
+function renderAll() { renderHeader(); renderBets(); renderStats(); analyze(); }
+
+load(); fillSettings(); renderAll();
+try { const c = localStorage.getItem(KEY + "_sports"); if (c) $("mSport").innerHTML = c; } catch {}
+if (!localStorage.getItem(KEY)) show("settings");
+</script>
+</body>
+</html>

@@ -170,6 +170,14 @@ svg{width:100%;height:auto;display:block}
 <section id="tab-bets" class="hidden">
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2 style="margin:0">Własny / cudzy kupon</h2>
+      <button id="btnManual" class="sm ghost">+ Dodaj</button>
+    </div>
+    <div class="hint">Kupon spoza apki, np. od kogoś. Rozliczasz go ręcznie, a w Statystykach zobaczysz, czy takie kupony się opłacają.</div>
+    <div id="manualForm" class="pfbox"></div>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
       <h2 style="margin:0">Otwarte</h2>
       <button id="btnSettle" class="sm ghost">Sprawdź wyniki</button>
     </div>
@@ -192,6 +200,10 @@ svg{width:100%;height:auto;display:block}
   <div class="card">
     <h2>Gdzie zarabiasz, gdzie tracisz</h2>
     <div id="breakdown"></div>
+  </div>
+  <div class="card">
+    <h2>Closing Line Value</h2>
+    <div id="clvBox"></div>
   </div>
   <div class="card">
     <h2>Korekta Twoich ocen</h2>
@@ -227,6 +239,8 @@ svg{width:100%;height:auto;display:block}
       <div><label>Maks. meczów</label>
         <select id="sDSize"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>
     </div>
+    <div class="toggle"><span>Over/Under (Powyżej/Poniżej) w piłce</span><input id="sTotals" type="checkbox"></div>
+    <div class="hint">Więcej typów do wyboru. Pobranie kursów na żywo zużywa wtedy 2× więcej limitu API; kursy z chmury nic nie zużywają.</div>
     <label>Minimalny kurs pojedynczego typu</label>
     <input id="sMinOdds" type="number" step="0.05" inputmode="decimal">
     <div class="hint">Kursy niższe niż ok. 1.15 po podatku 12% nic nie dają nawet po wygranej.</div>
@@ -260,11 +274,13 @@ svg{width:100%;height:auto;display:block}
   <button data-tab="settings">Ustawienia</button>
 </nav>
 
+<script src="engine.js"></script>
 <script>
 "use strict";
 const KEY = "betdoradca_v1";
-const VERSION = "1.5.1";
+const VERSION = "1.6.0";
 const CHANGELOG = [
+  ["1.6", "Over/Under w piłce, własne/cudze kupony w Zakładach, stawki min. 2 zł z dziennej puli budżetu, formularz „Jak zagrałeś?” przy każdym kuponie, łagodniejszy filtr niepewnych meczów (odrzuca nieaktualnych bukmacherów, nie cały mecz)."],
   ["1.5.1", "Naprawiony „Zagrałem” w kuponie dnia po północy. Przy zapisie wpisujesz faktyczną stawkę, kurs i „bez podatku”."],
   ["1.5", "Nowy silnik kuponów: optymalizator kombinacji (najwyższa szansa dla wybranego kursu), szanse z Pinnacle i giełd z korektą na faworytów, wykrywanie niepewnych meczów, ruch kursów ↑↓, wybór „Dziś/Jutro”."],
   ["1.4", "Apka na telefon: ikona, działa offline, numer wersji i ta lista."],
@@ -280,7 +296,7 @@ const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 const DEFAULTS = {
-  settings: {start: 500, kelly: 0.25, maxPct: 3, edge: 3, stop: 30, daily: 50, tax: true, apiKey: "", month: 150, dSize: 3, dTarget: 2, minOdds: 1.20},
+  settings: {start: 500, kelly: 0.25, maxPct: 3, edge: 3, stop: 30, daily: 50, tax: true, apiKey: "", month: 150, dSize: 3, dTarget: 2, minOdds: 1.20, totals: true},
   daily: {},
   bets: []
 };
@@ -424,8 +440,8 @@ function betRow(b, open) {
   const stTxt = {pending: "w grze", won: "wygrany", lost: "przegrany", void: "zwrot"}[b.status];
   return `<div class="bet">
     <div class="t"><b>${esc(b.event)}</b><span class="st-${b.status}">${b.status === "pending" ? zl(b.stake) : (pl >= 0 ? "+" : "") + zl(pl)}</span></div>
-    <div class="m">${b.legs ? "" : esc(b.pick) + " @ "}${b.odds.toFixed(2)}${b.noTax ? " · bez podatku" : ""} · stawka ${zl(b.stake)} · ${stTxt} · ${new Date(b.date).toLocaleDateString("pl-PL")}</div>
-    ${b.legs ? b.legs.map(l => `<div class="m">${l.result === true ? "✅" : l.result === false ? "❌" : "⏳"} ${esc(l.home)} – ${esc(l.away)}: ${esc(l.pick || l.outcome)}${l.score ? ` <span style="opacity:.8">(${esc(l.score)})</span>` : ""}</div>`).join("") : ""}
+    <div class="m">${b.legs || !b.pick ? "" : esc(b.pick) + " @ "}${b.odds.toFixed(2)}${b.noTax ? " · bez podatku" : ""} · stawka ${zl(b.stake)} · ${stTxt} · ${new Date(b.date).toLocaleDateString("pl-PL")}</div>
+    ${b.legs ? b.legs.map(l => `<div class="m">${l.result === true ? "✅" : l.result === false ? "❌" : "⏳"} ${esc(l.home)} – ${esc(l.away)}: ${esc(l.pick || l.outcome)}${l.score ? ` <span style="opacity:.8">(${esc(l.score)})</span>` : ""}${clvOf(l) !== null ? ` · <span style="color:${clvOf(l) >= 0 ? "var(--green)" : "var(--red)"}">CLV ${clvOf(l) >= 0 ? "+" : ""}${pct(clvOf(l))}</span>` : ""}</div>`).join("") : ""}
     ${open ? `<div class="acts">
       <button class="sm g" data-act="won" data-id="${b.id}">Wygrany</button>
       <button class="sm r" data-act="lost" data-id="${b.id}">Przegrany</button>
@@ -480,8 +496,7 @@ async function autoSettle(manual = false) {
       const sc = Object.fromEntries(e.scores.map(x => [x.name, parseFloat(x.score)]));
       const h = sc[e.home_team], a = sc[e.away_team];
       if (!isFinite(h) || !isFinite(a)) continue;
-      const winner = h > a ? e.home_team : a > h ? e.away_team : "Draw";
-      l.result = winner === l.outcome; l.score = `${h}:${a}`;
+      l.result = Engine.legResult(l, e.home_team, e.away_team, h, a); l.score = `${h}:${a}`;
     }
     const res = b.legs.map(l => l.result);
     const ns = res.includes(false) ? "lost" : res.every(r => r === true) ? "won" : "pending";
@@ -492,6 +507,12 @@ async function autoSettle(manual = false) {
   settling = false;
 }
 $("btnSettle").onclick = () => autoSettle(true);
+$("btnManual").onclick = () => openPlayForm($("manualForm"), {stake: 10, odds: null, desc: ""}, ({stake, odds, noTax, desc}) => {
+  const p = 0.93 / odds; // przybliżenie: kurs minus typowa marża
+  S.bets.unshift({id: Date.now().toString(36), date: new Date().toISOString(), event: desc || "Własny kupon", pick: "",
+    odds, userP: p, marketP: p, adjP: p, stake, noTax, status: "pending", settledAt: null, src: "wlasne"});
+  save(); renderAll(); $("manualForm").innerHTML = "";
+});
 
 /* ---------- Stats ---------- */
 function renderStats() {
@@ -525,6 +546,7 @@ function renderStats() {
   }
 
   renderBreakdown(done);
+  renderCLV();
 
   const c = fitK();
   let txt;
@@ -553,10 +575,10 @@ function groupTable(rows, groupFn, order, title) {
 }
 function renderBreakdown(done) {
   if (done.length < 3) { $("breakdown").innerHTML = `<div class="hint">Pojawi się po kilku rozliczonych zakładach.</div>`; return; }
-  const srcName = {dzien: "Kupon dnia", kupony: "Kupony", analiza: "Analiza"};
+  const srcName = {dzien: "Kupon dnia", kupony: "Kupony", analiza: "Analiza", wlasne: "Własne/cudze"};
   const bucket = o => o < 1.5 ? "< 1.50" : o < 2 ? "1.50–1.99" : o < 3 ? "2.00–2.99" : "3.00+";
   const pb = b => { const p = b.adjP || b.marketP || 0; return p < 0.4 ? "< 40%" : p < 0.55 ? "40–55%" : p < 0.7 ? "55–70%" : "70%+"; };
-  let html = groupTable(done, b => srcName[b.src] || "Inne", ["Kupon dnia", "Kupony", "Analiza", "Inne"], "Wg źródła");
+  let html = groupTable(done, b => srcName[b.src] || "Inne", ["Kupon dnia", "Kupony", "Własne/cudze", "Analiza", "Inne"], "Wg źródła");
   html += groupTable(done, b => bucket(b.odds), ["< 1.50", "1.50–1.99", "2.00–2.99", "3.00+"], "Wg kursu");
   // kalibracja
   const g = {};
@@ -602,70 +624,15 @@ async function fetchOdds() {
     $("mList").innerHTML = rows.map(renderEvent).join("");
   } catch (e) { $("mList").innerHTML = ""; $("mInfo").textContent = e.message; }
 }
-/* ---------- Silnik szans (v1.5) ---------- */
-// Najostrzejsze rynki: Pinnacle i giełdy mają najmniejszą marżę i najszybciej reagują na newsy.
-const SHARP = ["pinnacle", "betfair_ex_eu", "betfair_ex_uk", "matchbook", "smarkets"];
-// Metoda potęgowa usuwania marży: bukmacherzy chowają większość marży w kursach na outsiderów,
-// więc proporcjonalne dzielenie zaniża szanse faworytów. p_i = q_i^k, gdzie Σ q_i^k = 1.
-function devig(prices) {
-  const q = prices.map(o => 1 / o);
-  const sum = q.reduce((a, b) => a + b, 0);
-  if (!(sum > 1)) return q.map(x => x / sum);
-  let lo = 1, hi = 6;
-  for (let i = 0; i < 60; i++) { const k = (lo + hi) / 2; if (q.reduce((a, x) => a + x ** k, 0) > 1) lo = k; else hi = k; }
-  const pr = q.map(x => x ** lo), s2 = pr.reduce((a, b) => a + b, 0);
-  return pr.map(x => x / s2);
-}
-const median = a => { const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
-function analyzeEvent(ev) {
-  const books = (ev.bookmakers || []).filter(b => b.markets?.[0]?.outcomes?.length);
-  if (books.length < 3) return null;
-  const outcomes = [...new Set(books.flatMap(b => b.markets[0].outcomes.map(o => o.name)))];
-  const fairs = [];
-  for (const b of books) {
-    const o = b.markets[0].outcomes;
-    if (o.length !== outcomes.length) continue;
-    const prices = outcomes.map(n => o.find(x => x.name === n)?.price);
-    if (prices.some(x => !(x > 1))) continue;
-    fairs.push({key: b.key, title: b.title, p: devig(prices)});
-  }
-  if (fairs.length < 3) return null;
-  const sharp = fairs.filter(f => SHARP.includes(f.key));
-  let fair, src;
-  if (sharp.length) {
-    fair = outcomes.map((_, i) => sharp.reduce((a, f) => a + f.p[i], 0) / sharp.length);
-    src = sharp.map(f => f.title).join(" + ");
-  } else {
-    fair = outcomes.map((_, i) => median(fairs.map(f => f.p[i])));
-    const s3 = fair.reduce((a, b) => a + b, 0); fair = fair.map(x => x / s3);
-    src = `mediana ${fairs.length} buk.`;
-  }
-  // rozrzut ocen między bukmacherami: duży = niepewność (kontuzje, składy, świeże newsy)
-  const disp = Math.max(...outcomes.map((_, i) => {
-    const v = fairs.map(f => f.p[i]), m = v.reduce((a, b) => a + b, 0) / v.length;
-    return Math.sqrt(v.reduce((a, x) => a + (x - m) ** 2, 0) / v.length);
-  }));
-  const res = outcomes.map((n, i) => {
-    let best = null, betclic = null;
-    books.forEach(b => {
-      const o = b.markets[0].outcomes.find(x => x.name === n); if (!o) return;
-      if (SHARP.includes(b.key) && b.key.includes("_ex_")) return; // kurs giełdy nie do zagrania w PL
-      if (!best || o.price > best.price) best = {price: o.price, book: b.title};
-      if (b.key.startsWith("betclic")) betclic = o.price;
-    });
-    if (!best) best = {price: 1 / fair[i], book: "–"};
-    const edge = fair[i] * best.price * taxF() - 1;
-    const edgeBc = betclic ? fair[i] * betclic * taxF() - 1 : null;
-    return {name: n, p: fair[i], best, betclic, edge, edgeBc};
-  });
-  return {ev, res, bestEdge: Math.max(...res.map(r => r.edgeBc ?? -1)), pin: sharp.length > 0, src, n: books.length, disp};
-}
+/* ---------- Silnik (engine.js) ---------- */
+const analyzeEvent = ev => Engine.analyzeEvent(ev, taxF());
+const pickLabel = Engine.pickLabel;
+const MIN_STAKE = Engine.MIN_STAKE;
 
 // Ruch rynku: zapamiętuje pierwszą zobaczoną szansę, potem pokazuje zmianę (newsy, składy, kontuzje).
 let SNAP = {};
 try { SNAP = JSON.parse(localStorage.getItem(KEY + "_snap")) || {}; } catch {}
-function trackMove(id, outcome, p, time) {
-  const k = id + "|" + outcome;
+function trackMove(k, p, time) {
   if (!SNAP[k]) SNAP[k] = {p, t: time};
   return p - SNAP[k].p;
 }
@@ -674,75 +641,51 @@ function saveSnap() {
   for (const k in SNAP) if (Date.parse(SNAP[k].t) < cutoff) delete SNAP[k];
   try { localStorage.setItem(KEY + "_snap", JSON.stringify(SNAP)); } catch {}
 }
-const MAX_DISP = 0.035; // odchylenie szans między bukmacherami; normalny szum to ~0.01–0.02
 
-// Zbiera wszystkie możliwe typy (każdy wynik każdego meczu) z wybranych lig.
+// Zbiera wszystkie możliwe typy z wybranych lig.
 async function collectLegs(force = false, bookMode = "pref") {
   const leagueName = Object.fromEntries(LEAGUES.map(l => [l[0], l[1]]));
-  const now = Date.now(), legs = [];
-  let errors = 0, unsure = 0;
+  const now = Date.now(), legs = [], unsure = [], fair = {};
+  let errors = 0;
+  oddsSrc = new Set();
   for (const sp of selLeagues()) {
     let evs;
     try { evs = await getEvents(sp, force); }
     catch (e) { if (/klucz|401/.test(e.message)) throw e; errors++; continue; }
-    for (const ev of evs) {
-      if (Date.parse(ev.commence_time) < now + 10 * 60000) continue;
-      const a = analyzeEvent(ev); if (!a) continue;
-      if (a.disp > MAX_DISP) { unsure++; continue; }
-      for (const r of a.res) {
-        let odds, book;
-        if (bookMode === "best") { odds = r.best.price; book = r.best.book; }
-        else if (r.betclic) { odds = r.betclic; book = "Betclic"; }
-        else if (bookMode === "only") continue;
-        else { odds = r.best.price; book = r.best.book; }
-        if (!(odds > 1) || odds < S.settings.minOdds || odds * taxF() < 1.03) continue;
-        legs.push({
-          id: ev.id, sport: sp, outcome: r.name, pick: pickLabel(ev, r.name),
-          home: ev.home_team, away: ev.away_team, time: ev.commence_time, league: leagueName[sp] || sp,
-          p: r.p, odds, book, value: r.p * odds * taxF(), n: a.n, src: a.src,
-          move: trackMove(ev.id, r.name, r.p, ev.commence_time)
-        });
-      }
-    }
+    const r = Engine.eventLegs(evs, {sport: sp, league: leagueName[sp] || sp, tax: taxF(), minOdds: S.settings.minOdds, bookMode, now, totals: S.settings.totals});
+    r.legs.forEach(l => { l.move = trackMove(Engine.legKeyOf(l.id, l.market, l.outcome, l.point), l.p, l.time); legs.push(l); });
+    unsure.push(...r.unsure); Object.assign(fair, r.fair);
   }
-  saveSnap();
+  saveSnap(); updateCLV(fair);
   return {legs, errors, unsure};
 }
 
-// Optymalizator: dla zadanego kursu łącznego szuka kombinacji (max 1 typ na mecz) z najwyższą szansą.
-// Szansa = Π p_i, a przy stałym kursie O: Π p_i = Π(p_i·o_i)/O — wygrywają typy z najmniejszą marżą.
-function optimize(legs, {target, maxLegs, exclude = [], top = 3}) {
-  const ex = new Set(exclude);
-  const pool = legs.filter(l => !ex.has(l.id)).sort((a, b) => b.value - a.value).slice(0, 45);
-  const run = hiMul => {
-    const lo = target * 0.97, hi = target * hiMul, found = [];
-    const chosen = [], ids = new Set();
-    const rec = (start, O, P) => {
-      if (chosen.length && O >= lo && O <= hi) found.push({legs: [...chosen], odds: O, p: P});
-      if (chosen.length === maxLegs || O > hi) return;
-      for (let i = start; i < pool.length; i++) {
-        const l = pool[i]; if (ids.has(l.id)) continue;
-        ids.add(l.id); chosen.push(l);
-        rec(i + 1, O * l.odds, P * l.p);
-        chosen.pop(); ids.delete(l.id);
-      }
-    };
-    rec(0, 1, 1);
-    return found;
-  };
-  let found = run(1.25);
-  if (!found.length) found = run(1.8);
-  found.sort((a, b) => b.p - a.p);
-  // różnorodność: alternatywy muszą różnić się co najmniej jednym meczem od poprzednich
-  const out = [];
-  for (const c of found) {
-    const key = c.legs.map(l => l.id).sort().join();
-    if (out.some(o => o.key === key)) continue;
-    c.legs.sort((a, b) => Date.parse(a.time) - Date.parse(b.time));
-    out.push({...c, key});
-    if (out.length >= top) break;
+/* ---------- v2.1 Closing Line Value ---------- */
+// Zapisuje ostatnią „uczciwą” szansę typu przed startem meczu. CLV = Twój kurs × szansa na zamknięciu − 1.
+function updateCLV(fair) {
+  const now = Date.now(); let ch = false;
+  for (const b of S.bets) {
+    if (!b.legs) continue;
+    for (const l of b.legs) {
+      if (Date.parse(l.time) <= now) continue;
+      const p = fair[Engine.legKeyOf(l.id, l.market, l.outcome, l.point)];
+      if (p) { l.pClose = p; ch = true; }
+    }
   }
-  return out;
+  if (ch) save();
+}
+const clvOf = l => l.pClose && l.odds ? l.odds * l.pClose - 1 : null;
+function renderCLV() {
+  const now = Date.now();
+  const legs = S.bets.flatMap(b => b.legs || []).filter(l => l.pClose && Date.parse(l.time) <= now);
+  if (legs.length < 3) { $("clvBox").innerHTML = `<div class="hint">Pojawi się po kilku rozegranych meczach z kuponów apki. Apka zapisuje ostatnią szansę każdego typu przed meczem (z chmury lub przy otwarciu apki).</div>`; return; }
+  const v = legs.map(clvOf), avg = v.reduce((a, b) => a + b, 0) / v.length, pos = v.filter(x => x > 0).length / v.length;
+  $("clvBox").innerHTML = `<div class="cbig">
+      <div class="stat"><div class="v" style="color:${avg >= 0 ? "var(--green)" : "var(--red)"}">${avg >= 0 ? "+" : ""}${pct(avg)}</div><div class="k">średni CLV</div></div>
+      <div class="stat"><div class="v">${pct(pos, 0)}</div><div class="k">typów z CLV &gt; 0</div></div>
+      <div class="stat"><div class="v">${legs.length}</div><div class="k">typów</div></div>
+    </div>
+    <div class="hint">CLV porównuje Twój kurs z realną szansą tuż przed meczem. Dodatni = brałeś kursy lepsze, niż rynek uznał na koniec — najlepszy znak, że wybór typów jest dobry, niezależnie od szczęścia. Typowy gracz ma tu ok. −5%.</div>`;
 }
 
 function legHTML(l, extra = "") {
@@ -807,60 +750,88 @@ document.addEventListener("click", e => {
   renderLeagueChips();
 });
 
+/* ---------- v2.0 Kursy z chmury (data/odds.json, zapis z GitHub Actions) ---------- */
+let cloudData = null, cloudTried = false, oddsSrc = new Set();
+async function cloudOdds() {
+  if (cloudTried) return cloudData;
+  cloudTried = true;
+  try {
+    const r = await fetch("data/odds.json", {cache: "no-store"});
+    if (r.ok) {
+      const d = await r.json();
+      if (d && d.ts && Date.now() - Date.parse(d.ts) < 14 * 3600000) cloudData = d;
+    }
+  } catch {}
+  return cloudData;
+}
 async function getEvents(sport, force = false) {
-  const ck = KEY + "_odds_" + sport;
+  const totals = S.settings.totals && sport.startsWith("soccer");
+  if (!force) {
+    const c = await cloudOdds();
+    if (c?.sports?.[sport] && (!totals || (c.markets || []).includes("totals"))) {
+      oddsSrc.add("chmura " + new Date(c.ts).toLocaleTimeString("pl-PL", {hour: "2-digit", minute: "2-digit"}));
+      return c.sports[sport];
+    }
+  }
+  const ck = KEY + "_odds_" + sport + (totals ? "_t" : "");
   try {
     const c = JSON.parse(localStorage.getItem(ck));
-    if (c && !force && Date.now() - c.ts < CACHE_MIN * 60000) return c.data;
+    if (c && !force && Date.now() - c.ts < CACHE_MIN * 60000) { oddsSrc.add("pamięć apki"); return c.data; }
   } catch {}
-  const data = await api(`/sports/${sport}/odds?regions=eu&markets=h2h&oddsFormat=decimal`);
+  const data = await api(`/sports/${sport}/odds?regions=eu&markets=${totals ? "h2h,totals" : "h2h"}&oddsFormat=decimal`);
   try { localStorage.setItem(ck, JSON.stringify({ts: Date.now(), data})); } catch {}
+  oddsSrc.add("na żywo");
   return data;
 }
 
 async function buildCoupons() {
-  if (!S.settings.apiKey) { $("cInfo").textContent = "Najpierw wklej darmowy klucz The Odds API w Ustawieniach."; show("settings"); return; }
   if (!selLeagues().length) { $("cInfo").textContent = "Zaznacz przynajmniej jedną ligę."; return; }
   $("cList").innerHTML = `<div class="card hint">Pobieram kursy i liczę kombinacje…</div>`;
   const when = $("cWhen").value, target = +$("cTarget").value, maxLegs = +$("cMax").value;
   let data;
   try { data = await collectLegs(false, $("cBook").value); }
-  catch (e) { $("cList").innerHTML = ""; $("cInfo").textContent = e.message; return; }
+  catch (e) { $("cList").innerHTML = ""; $("cInfo").textContent = e.message + (/klucz/.test(e.message) ? " Albo skonfiguruj automat w chmurze (README)." : ""); return; }
   const tk = todayKey(), tm = dayKey(new Date(Date.now() + 864e5)), now = Date.now();
-  const legs = data.legs.filter(l => {
-    const t = Date.parse(l.time);
+  const inWindow = time => {
+    const t = Date.parse(time);
     if (when === "today") return dayKey(new Date(t)) === tk;
     if (when === "tomorrow") return dayKey(new Date(t)) === tm;
     return t <= now + (+when) * 3600000;
-  });
+  };
+  const legs = data.legs.filter(l => inWindow(l.time));
   const matches = new Set(legs.map(l => l.id)).size;
+  const unsureN = new Set(data.unsure.filter(u => inWindow(u.time)).map(u => u.id)).size;
   if (!legs.length) {
     $("cList").innerHTML = `<div class="card hint">Brak meczów w tym czasie w wybranych ligach${data.errors ? " (część lig poza sezonem)" : ""}. Zaznacz więcej lig albo zmień „Kiedy”.</div>`;
     return;
   }
   const best = optimize(legs, {target, maxLegs, top: 3});
   couponStore = [];
-  const unsure = data.unsure ? ` Pominięto ${data.unsure} mecz(e) z dużą niezgodnością bukmacherów (prawdopodobnie świeże newsy).` : "";
-  let html = `<div class="card hint" style="margin-bottom:12px">Przeanalizowano ${matches} meczów i ${legs.length} typów.${unsure}</div>`;
+  let html = `<div class="card hint" style="margin-bottom:12px">Przeanalizowano ${matches} meczów i ${legs.length} typów.${unsureN ? ` Pominięto ${unsureN} mecz(e), gdzie ostre rynki już zareagowały na newsy, a inni bukmacherzy jeszcze nie.` : ""} Kursy: ${[...oddsSrc].join(", ")}.</div>`;
   if (!best.length) html += `<div class="card hint">Nie da się ułożyć kuponu z kursem ~${target.toFixed(2)} z maks. ${maxLegs} meczów. Zwiększ liczbę meczów albo zmniejsz kurs.</div>`;
   html += best.map((c, i) => renderCoupon(c, i === 0 ? "🏆 Najlepszy kupon" : `Alternatywa ${i}`)).join("");
-  // ranking pojedynczych typów
   const singles = [...legs].sort((a, b) => b.p - a.p).slice(0, 10);
   html += `<div class="card"><h2>Najpewniejsze typy</h2>${singles.map(l => legHTML(l, `<div class="m">EV ${l.value >= 1 ? "+" : ""}${pct(l.value - 1)} · ${esc(l.src)}</div>`)).join("")}</div>`;
   html += `<div class="card"><div class="warn">Najwyższa szansa przy danym kursie ≠ zysk. EV na zielono = kurs wyższy niż realna szansa (rzadkie). Na czerwono = na dłuższą metę tracisz, nawet jeśli ten kupon wejdzie.</div></div>`;
   $("cList").innerHTML = html;
 }
+const optimize = Engine.optimize;
+
+// Stawka: Kelly przy plusowej wartości, inaczej dzienna pula z budżetu miesięcznego. Nigdy poniżej 2 zł.
+function suggestStake(odds, p) {
+  const r = recommend(odds, p, p);
+  if (r.type === "stop") return {stake: 0, note: r.reason};
+  const m = monthInfo(), free = Math.floor(bankroll() - pendingStake());
+  if (r.type === "yes") return {stake: Math.max(MIN_STAKE, Math.min(r.stake, free)), note: "Plusowa wartość — stawka z Kelly’ego."};
+  if (m.perDay >= MIN_STAKE && free >= MIN_STAKE) return {stake: Math.min(m.perDay, free), note: `Minusowa wartość — stawka z dzisiejszej puli budżetu (zostało ${zl(m.perDay)}).`};
+  return {stake: 0, note: m.left < MIN_STAKE ? "Budżet na ten miesiąc wykorzystany." : free < MIN_STAKE ? "Za mało wolnych środków." : "Dzisiejsza pula budżetu wykorzystana — wróć jutro."};
+}
 
 let couponStore = [];
 function renderCoupon(c, title) {
   const {legs, p, odds} = c;
-  const r = recommend(odds, p, p);
   const ev = p * odds * taxF() - 1;
-  const bank = bankroll(), free = bank - pendingStake();
-  let stake, note;
-  if (r.type === "stop") { stake = 0; note = r.reason; }
-  else if (r.type === "yes") { stake = r.stake; note = `Plusowa wartość. Stawka z Kelly’ego.`; }
-  else { stake = Math.max(0, Math.floor(Math.min(bank * 0.01, free))); note = `Minusowa wartość — jeśli grasz, to „za zabawę”, max 1% salda.`; }
+  const {stake, note} = suggestStake(odds, p);
   const idx = couponStore.push({legs, p, odds, stake, title}) - 1;
   return `<div class="card">
     <h2>${esc(title)}</h2>
@@ -870,13 +841,44 @@ function renderCoupon(c, title) {
       <div class="stat"><div class="v">${odds.toFixed(2)}</div><div class="k">kurs łączny</div></div>
       <div class="stat"><div class="v" style="color:${ev >= 0 ? "var(--green)" : "var(--red)"}">${ev >= 0 ? "+" : ""}${pct(ev)}</div><div class="k">EV po podatku</div></div>
     </div>
-    <div class="hint">${esc(note)}${stake ? ` Sugerowana stawka: <b style="color:var(--text)">${zl(stake)}</b>, możliwa wygrana ${zl(stake * taxF() * odds)}.` : ""}</div>
+    <div class="hint">${esc(note)}${stake ? ` Sugerowana stawka: <b style="color:var(--text)">${zl(stake)}</b>, możliwa wygrana ${zl(stake * taxF() * odds)} (bez podatku: ${zl(stake * odds)}).` : ""}</div>
     <div class="row">
       <button class="ghost" data-copyc="${idx}">Kopiuj</button>
-      ${stake ? `<button class="g" data-coupon="${idx}">Zagrałem</button>` : ""}
+      <button class="g" data-coupon="${idx}">Zagrałem</button>
     </div>
+    <div class="pfbox" id="pf${idx}"></div>
   </div>`;
 }
+const legsForBet = legs => legs.map(({id, sport, market, point, outcome, pick, home, away, time, league, odds, p}) => ({id, sport, market, point, outcome, pick, home, away, time, league, odds, p}));
+
+// Wspólny formularz „Jak zagrałeś?”: faktyczna stawka, kurs, bez podatku.
+let pfSave = null;
+function openPlayForm(el, {stake, odds, desc = null, note = ""}, onSave) {
+  document.querySelectorAll(".pfbox").forEach(x => { if (x !== el) x.innerHTML = ""; });
+  pfSave = onSave;
+  el.innerHTML = `<div class="card" style="margin-top:12px;background:var(--card2)">
+    <b>${desc !== null ? "Dodaj kupon" : "Jak zagrałeś w Betclic?"}</b>
+    ${desc !== null ? `<label>Opis (np. od kogo, jakie mecze)</label><input id="pfDesc" value="${esc(desc)}">` : ""}
+    <div class="row">
+      <div><label>Stawka (zł)</label><input id="pfStake" type="number" inputmode="decimal" value="${stake || ""}"></div>
+      <div><label>Kurs łączny</label><input id="pfOdds" type="number" step="0.01" inputmode="decimal" value="${odds ? odds.toFixed(2) : ""}"></div>
+    </div>
+    <div class="toggle"><span>Bez podatku (promocja Betclic)</span><input id="pfNoTax" type="checkbox"></div>
+    ${note ? `<div class="hint">${esc(note)}</div>` : ""}
+    <div class="row"><button class="ghost" data-pfcancel>Anuluj</button><button class="g" data-pfsave>Zapisz</button></div>
+  </div>`;
+  (desc !== null ? $("pfDesc") : $("pfStake")).focus();
+}
+document.addEventListener("click", e => {
+  if (e.target.closest("[data-pfcancel]")) { e.target.closest(".pfbox").innerHTML = ""; pfSave = null; return; }
+  const sv = e.target.closest("[data-pfsave]"); if (!sv || !pfSave) return;
+  const num = id => parseFloat(($(id).value || "").replace(",", "."));
+  const stake = num("pfStake"), odds = num("pfOdds");
+  if (!(stake > 0) || !(odds > 1)) { sv.textContent = "Wpisz stawkę i kurs"; return; }
+  const fn = pfSave; pfSave = null;
+  fn({stake, odds, noTax: $("pfNoTax").checked, desc: $("pfDesc") ? $("pfDesc").value.trim() : null});
+});
+
 document.addEventListener("click", async e => {
   const cp = e.target.closest("[data-copyc]");
   if (cp) {
@@ -886,15 +888,19 @@ document.addEventListener("click", async e => {
     return;
   }
   const t = e.target.closest("[data-coupon]"); if (!t) return;
-  const c = couponStore[+t.dataset.coupon]; if (!c) return;
-  S.bets.unshift({
-    id: Date.now().toString(36), date: new Date().toISOString(),
-    event: c.legs.map(l => `${l.home}–${l.away}`).join(" + "),
-    pick: c.legs.map(l => l.pick).join(" + "),
-    odds: c.odds, userP: c.p, marketP: c.p, adjP: c.p, stake: c.stake, status: "pending", settledAt: null, src: "kupony",
-    legs: c.legs.map(({id, sport, outcome, pick, home, away, time, league, odds, p}) => ({id, sport, outcome, pick, home, away, time, league, odds, p}))
+  const idx = +t.dataset.coupon, c = couponStore[idx]; if (!c) return;
+  openPlayForm($("pf" + idx), {stake: c.stake || 10, odds: c.odds}, ({stake, odds, noTax}) => {
+    S.bets.unshift({
+      id: Date.now().toString(36), date: new Date().toISOString(),
+      event: c.legs.map(l => `${l.home}–${l.away}`).join(" + "),
+      pick: c.legs.map(l => l.pick).join(" + "),
+      odds, userP: c.p, marketP: c.p, adjP: c.p, stake, noTax, status: "pending", settledAt: null, src: "kupony",
+      legs: legsForBet(c.legs)
+    });
+    save(); renderAll();
+    $("pf" + idx).innerHTML = `<div class="hint" style="margin-top:8px">✅ Zapisano w Zakładach.</div>`;
+    t.disabled = true; t.textContent = "Zagrany ✓";
   });
-  save(); renderAll(); t.textContent = "Zapisano ✓"; t.disabled = true;
 });
 $("btnCoupons").onclick = () => buildCoupons();
 
@@ -905,19 +911,11 @@ let dayCands = {};        // dzień -> kandydaci (z aktualnych kursów)
 let selDay = null;
 let dailyLoaded = false, loadedDay = null;
 
-function pickLabel(ev, name) {
-  if (name === ev.home_team) return `1 (${name})`;
-  if (name === ev.away_team) return `2 (${name})`;
-  if (/draw/i.test(name)) return "X (remis)";
-  return name;
-}
-
 async function loadDaily(force = false) {
-  if (!S.settings.apiKey) { $("dDetail").innerHTML = `<div class="hint">Wklej klucz API w Ustawieniach.</div>`; renderCal(); return; }
   $("dDetail").innerHTML = `<div class="hint">Pobieram kursy…</div>`;
   let data;
   try { data = await collectLegs(force, "pref"); }
-  catch (e) { $("dDetail").innerHTML = `<div class="hint">${esc(e.message)}</div>`; return; }
+  catch (e) { $("dDetail").innerHTML = `<div class="hint">${esc(e.message)}</div>`; renderCal(); return; }
   dayCands = {};
   data.legs.forEach(l => { const k = dayKey(new Date(l.time)); (dayCands[k] = dayCands[k] || []).push(l); });
   // zamroź dzisiejszy kupon (żeby nie zmieniał się w ciągu dnia)
@@ -937,30 +935,29 @@ function makeDaily(k, exclude = []) {
   return {legs: c.legs.map(({value, ...l}) => l), p: c.p, odds: c.odds, skip: exclude};
 }
 
+// Budżet miesięczny liczony dla wszystkich zakładów. Dzienna pula = (budżet − wydane przed dziś) / pozostałe dni.
 function monthInfo() {
-  const now = new Date();
-  const ym = todayKey().slice(0, 7);
-  const spent = S.bets.filter(b => b.daily && b.daily.startsWith(ym)).reduce((a, b) => a + b.stake, 0);
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const playedToday = S.bets.some(b => b.daily === todayKey());
-  const daysLeft = Math.max(1, daysInMonth - now.getDate() + (playedToday ? 0 : 1));
-  const left = Math.max(0, S.settings.month - spent);
-  return {spent, left, daysLeft, perDay: Math.floor(left / daysLeft)};
+  const now = new Date(), tk = todayKey(), ym = tk.slice(0, 7);
+  const mine = S.bets.filter(b => b.date && dayKey(new Date(b.date)).startsWith(ym));
+  const spent = mine.reduce((a, b) => a + b.stake, 0);
+  const spentToday = mine.filter(b => dayKey(new Date(b.date)) === tk).reduce((a, b) => a + b.stake, 0);
+  const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate() + 1;
+  const allowance = Math.max(0, Math.floor((S.settings.month - (spent - spentToday)) / daysLeft));
+  return {spent, spentToday, left: Math.max(0, S.settings.month - spent), daysLeft, allowance, perDay: Math.max(0, allowance - spentToday)};
 }
 
 function dailyStake() {
-  const m = monthInfo();
-  const free = bankroll() - pendingStake();
-  const r = recommend(2, 0.5, 0.5); // tylko po to, by sprawdzić stop-loss / limit dzienny
+  const r = recommend(2, 0.5, 0.5); // sprawdza stop-loss / limit dzienny
   if (r.type === "stop") return {stake: 0, reason: r.reason};
-  let stake = Math.min(m.perDay, Math.floor(free));
-  if (stake < 2) return {stake: 0, reason: m.left < 2 ? "Budżet na ten miesiąc wykorzystany. Kolejne kupony od 1. dnia następnego miesiąca." : "Za mało wolnych środków na saldzie."};
+  const m = monthInfo(), free = Math.floor(bankroll() - pendingStake());
+  const stake = Math.min(m.perDay, free);
+  if (stake < MIN_STAKE) return {stake: 0, reason: m.left < MIN_STAKE ? "Budżet na ten miesiąc wykorzystany." : free < MIN_STAKE ? "Za mało wolnych środków." : "Dzisiejsza pula budżetu wykorzystana."};
   return {stake, reason: ""};
 }
 
 function renderCal() {
   const m = monthInfo();
-  $("dBudget").innerHTML = `Budżet miesiąca: <b style="color:var(--text)">${zl(S.settings.month)}</b> · wydane ${zl(m.spent)} · zostało ${zl(m.left)} na ${m.daysLeft} dni (~${zl(m.perDay)}/dzień)`;
+  $("dBudget").innerHTML = `Budżet miesiąca: <b style="color:var(--text)">${zl(S.settings.month)}</b> · wydane ${zl(m.spent)} · dziś do wykorzystania: <b style="color:var(--text)">${zl(m.perDay)}</b> (pula ${zl(m.allowance)}/dzień)`;
   const now = new Date(), y = now.getFullYear(), mo = now.getMonth();
   const first = new Date(y, mo, 1), dim = new Date(y, mo + 1, 0).getDate();
   const off = (first.getDay() + 6) % 7; // pon = 0
@@ -1014,7 +1011,7 @@ function renderDay(k) {
       <button class="ghost" data-copy="${k}">Kopiuj kupon</button>
       ${isToday && !bet ? `<button class="g" data-playday="${k}">Zagrałem</button>` : ""}
     </div>
-    <div id="playForm"></div>
+    <div id="playForm" class="pfbox"></div>
     ${bet && bet.status === "pending" ? `<div class="hint">Wynik zaznacz w zakładce Zakłady.</div>` : ""}`;
 }
 
@@ -1033,36 +1030,18 @@ document.addEventListener("click", async e => {
     const k = pl.dataset.playday;
     if (!S.daily[k]) { const nc = makeDaily(k); if (!nc) return; S.daily[k] = nc; save(); }
     const c = S.daily[k], ds = dailyStake();
-    $("playForm").innerHTML = `<div class="card" style="margin-top:12px;background:var(--card2)">
-      <b>Jak zagrałeś w Betclic?</b>
-      <div class="row">
-        <div><label>Stawka (zł)</label><input id="pfStake" type="number" inputmode="decimal" value="${ds.stake || 10}"></div>
-        <div><label>Kurs łączny</label><input id="pfOdds" type="number" step="0.01" inputmode="decimal" value="${c.odds.toFixed(2)}"></div>
-      </div>
-      <div class="toggle"><span>Bez podatku (promocja Betclic)</span><input id="pfNoTax" type="checkbox"></div>
-      ${ds.reason ? `<div class="hint">${esc(ds.reason)}</div>` : ""}
-      <div class="row"><button class="ghost" data-pfcancel>Anuluj</button><button class="g" data-pfsave="${k}">Zapisz</button></div>
-    </div>`;
-    $("pfStake").focus();
-    return;
-  }
-  if (e.target.closest("[data-pfcancel]")) { $("playForm").innerHTML = ""; return; }
-  const sv = e.target.closest("[data-pfsave]");
-  if (sv) {
-    const k = sv.dataset.pfsave, c = S.daily[k]; if (!c) return;
-    const num = id => parseFloat(($(id).value || "").replace(",", "."));
-    const stake = num("pfStake"), odds = num("pfOdds");
-    if (!(stake > 0) || !(odds > 1)) { sv.textContent = "Wpisz stawkę i kurs"; return; }
-    const id = Date.now().toString(36);
-    S.bets.unshift({
-      id, date: new Date().toISOString(), daily: k,
-      event: "Kupon dnia: " + c.legs.map(l => `${l.home}–${l.away}`).join(" + "),
-      pick: c.legs.map(l => l.pick).join(" + "),
-      odds, userP: c.p, marketP: c.p, adjP: c.p, stake, noTax: $("pfNoTax").checked,
-      status: "pending", settledAt: null, src: "dzien",
-      legs: c.legs.map(l => ({...l}))
+    openPlayForm($("playForm"), {stake: ds.stake || 10, odds: c.odds, note: ds.reason}, ({stake, odds, noTax}) => {
+      const id = Date.now().toString(36);
+      S.bets.unshift({
+        id, date: new Date().toISOString(), daily: k,
+        event: "Kupon dnia: " + c.legs.map(l => `${l.home}–${l.away}`).join(" + "),
+        pick: c.legs.map(l => l.pick).join(" + "),
+        odds, userP: c.p, marketP: c.p, adjP: c.p, stake, noTax,
+        status: "pending", settledAt: null, src: "dzien",
+        legs: legsForBet(c.legs)
+      });
+      c.betId = id; save(); renderAll(); renderCal(); renderDay(k);
     });
-    c.betId = id; save(); renderAll(); renderCal(); renderDay(k);
   }
 });
 $("btnDailyRefresh").onclick = () => loadDaily(true);
@@ -1084,7 +1063,7 @@ function fillSettings() {
   $("sStart").value = s.start; $("sKelly").value = s.kelly; $("sMax").value = s.maxPct;
   $("sEdge").value = s.edge; $("sStop").value = s.stop; $("sDaily").value = s.daily;
   $("sTax").checked = s.tax; $("sKey").value = s.apiKey;
-  $("sMonth").value = s.month; $("sDSize").value = s.dSize; $("sDTarget").value = s.dTarget; $("sMinOdds").value = s.minOdds;
+  $("sMonth").value = s.month; $("sDSize").value = s.dSize; $("sDTarget").value = s.dTarget; $("sMinOdds").value = s.minOdds; $("sTotals").checked = s.totals;
 }
 $("btnSave").onclick = () => {
   const n = (id, d, lo, hi) => { const v = parseFloat(($(id).value || "").replace(",", ".")); return isFinite(v) ? clamp(v, lo, hi) : d; };
@@ -1093,7 +1072,7 @@ $("btnSave").onclick = () => {
   s.maxPct = n("sMax", s.maxPct, 0.5, 25); s.edge = n("sEdge", s.edge, 0, 50);
   s.stop = n("sStop", s.stop, 5, 100); s.daily = n("sDaily", s.daily, 1, 1e7);
   s.tax = $("sTax").checked; s.apiKey = $("sKey").value.trim();
-  s.month = n("sMonth", s.month, 0, 1e7); s.dSize = +$("sDSize").value || 3; s.dTarget = +$("sDTarget").value || 2; dailyLoaded && loadDaily(false); s.minOdds = n("sMinOdds", s.minOdds, 1.01, 10);
+  s.month = n("sMonth", s.month, 0, 1e7); s.dSize = +$("sDSize").value || 3; s.dTarget = +$("sDTarget").value || 2; dailyLoaded && loadDaily(false); s.minOdds = n("sMinOdds", s.minOdds, 1.01, 10); s.totals = $("sTotals").checked;
   save(); fillSettings(); renderAll();
   $("btnSave").textContent = "Zapisano ✓"; setTimeout(() => $("btnSave").textContent = "Zapisz", 1200);
   if (s.apiKey && !$("mSport").value) loadSports();
@@ -1132,7 +1111,7 @@ load(); fillSettings(); renderAll(); renderLeagueChips();
 $("verTag").textContent = $("hVer").textContent = "v" + VERSION;
 $("changelog").innerHTML = CHANGELOG.map(([v, t]) => `<div class="bet"><b>v${v}</b><div class="m">${esc(t)}</div></div>`).join("") + `<div class="hint">Plany na kolejne wersje: ROADMAP.md w repo.</div>`;
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("sw.js").catch(() => {});
-show(S.settings.apiKey ? "coupons" : "analyze");
+show("coupons");
 setTimeout(() => autoSettle(false), 1500);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible" && dailyLoaded && loadedDay !== todayKey()) loadDaily();

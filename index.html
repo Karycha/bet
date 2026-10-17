@@ -37,6 +37,8 @@ button.g{background:var(--green)}button.r{background:var(--red)}
 .verdict{border-radius:12px;padding:14px;margin-top:12px;font-weight:600}
 .verdict.no{background:#3a1d22;color:#ffb3b3}
 .verdict.yes{background:#173826;color:#a6f3c5}
+.verdict.ok{background:#16314f;color:#b7d8ff}
+.verdict.meh{background:#3a321a;color:#ffe39a}
 .verdict.stop{background:#3a321a;color:#ffe39a}
 .verdict .big{font-size:24px;display:block;margin:4px 0}
 .verdict small{font-weight:400;display:block;color:inherit;opacity:.85}
@@ -109,12 +111,13 @@ svg{width:100%;height:auto;display:block}
     <div class="hint">Wpisz kursy pozostałych wyników z tego samego rynku (np. X i 2). Dzięki temu apka zdejmie marżę bukmachera i policzy, co rynek naprawdę myśli.</div>
     <label>Twoja szansa, że wejdzie (%)</label>
     <input id="fProb" type="number" step="1" inputmode="numeric" placeholder="np. 55">
-    <div class="hint">Szczerze. Apka i tak skoryguje to po Twoich wynikach.</div>
+    <div class="hint">Puste = apka weźmie szansę z kursów rynku. Twoją ocenę skoryguje po Twoich wynikach.</div>
+    <div class="toggle"><span>Bez podatku (promocja Betclic)</span><input id="fNoTax" type="checkbox"></div>
     <div id="verdict"></div>
     <button id="btnPlace" class="g hidden">Zapisz zakład</button>
   </div>
   <div class="card">
-    <div class="warn">Bukmacher ma przewagę (marża + w PL zwykle 12% podatku od stawki). Apka nie zgaduje wyników — mówi, kiedy kurs jest wart gry wg Twojej oceny, ile postawić i kiedy przestać. Najczęstszy werdykt to „nie graj” i to jest poprawne.</div>
+    <div class="warn">Bukmacher ma przewagę (marża + w PL zwykle 12% podatku od stawki). Apka nie zgaduje wyników — mówi, kiedy kurs jest wart gry wg Twojej oceny, ile postawić i kiedy przestać. „Dobry kurs” = najmniej zły typ do zagrania, „Wartość” = zakład, który na dłuższą metę zarabia (rzadki, częściej z promocją bez podatku).</div>
   </div>
 </section>
 
@@ -278,8 +281,9 @@ svg{width:100%;height:auto;display:block}
 <script>
 "use strict";
 const KEY = "betdoradca_v1";
-const VERSION = "2.1.1";
+const VERSION = "2.2.0";
 const CHANGELOG = [
+  ["2.2", "Analiza w 4 stopniach: Wartość / Dobry kurs / Przeciętny / Nie graj, z sugerowaną stawką i przełącznikiem „bez podatku”."],
   ["2.1.1", "Kupon dnia tylko z kursami Betclic, Over/Under domyślnie wyłączone (brak w źródle dla Betclic), generator domyślnie „Tylko Betclic”."],
   ["2.1", "Closing Line Value: apka zapisuje szansę typu tuż przed meczem i pokazuje CLV przy zakładach i w Statystykach."],
   ["2.0", "Automat w chmurze: GitHub Actions codziennie pobiera kursy (apka nie zużywa limitu API) i wysyła kupon dnia na telefon przez ntfy."],
@@ -332,13 +336,10 @@ function todayLoss() {
 
 /* ---------- Market probability (margin removal) ---------- */
 function marketProb(odds, others) {
+  if (others.length === 0) return {p: (1 / odds) / 1.06, margin: null}; // brak reszty rynku: typowa marża ~6%
   const all = [odds, ...others].filter(o => o > 1);
-  if (others.length === 0) {
-    // brak pozostałych kursów: zakładamy typową marżę 6%
-    return {p: (1 / odds) / 1.06, margin: null};
-  }
-  const sum = all.reduce((a, o) => a + 1 / o, 0);
-  return {p: (1 / odds) / sum, margin: sum - 1};
+  // metoda potęgowa (jak w silniku): marża rozłożona głównie na outsiderów
+  return {p: Engine.devig(all)[0], margin: all.reduce((a, o) => a + 1 / o, 0) - 1};
 }
 
 /* ---------- Learning: how much to trust user vs market ---------- */
@@ -365,13 +366,13 @@ function fitK() {
 }
 
 /* ---------- Recommendation ---------- */
-function recommend(odds, userP, mP) {
+function recommend(odds, userP, mP, noTax = false) {
   const st = S.settings;
   const bank = bankroll();
   const free = bank - pendingStake();
   const {k} = fitK();
   const adjP = clamp(mP + k * (userP - mP), 0.01, 0.99);
-  const effOdds = odds * taxF();
+  const effOdds = odds * (noTax ? 1 : taxF());
   const ev = adjP * effOdds - 1;
   const out = {adjP, ev, effOdds, k, stake: 0, type: "no", reason: ""};
 
@@ -400,9 +401,12 @@ function recommend(odds, userP, mP) {
 /* ---------- Analyze tab ---------- */
 let lastRec = null;
 function parseOthers(s) { return (s || "").split(/[,;\s]+/).map(x => parseFloat(x.replace(",", "."))).filter(x => x > 1); }
+// Werdykt w 4 stopniach. Z podatkiem prawie nic nie zarabia, więc oprócz „czy zarabia” liczy się,
+// czy kurs jest uczciwy jak na Betclic (marża na tym typie), bo to odróżnia dobre typy od złych.
 function analyze() {
   const odds = parseFloat(($("fOdds").value || "").replace(",", "."));
   const up = parseFloat($("fProb").value) / 100;
+  const noTax = $("fNoTax").checked;
   const v = $("verdict");
   $("btnPlace").classList.add("hidden");
   lastRec = null;
@@ -410,27 +414,40 @@ function analyze() {
   const others = parseOthers($("fOther").value);
   const m = marketProb(odds, others);
   const userP = up > 0 && up < 1 ? up : m.p;
-  const r = recommend(odds, userP, m.p);
-  lastRec = {odds, userP, marketP: m.p, ...r};
-  const marginTxt = m.margin === null ? "marża założona ~6%" : `marża bukmachera ${pct(m.margin)}`;
-  const info = `<small>Rynek: ${pct(m.p)} (${marginTxt}) · Ty: ${pct(userP)} · Po korekcie: <b>${pct(r.adjP)}</b><br>Kurs po podatku: ${r.effOdds.toFixed(2)} · Zaufanie do Twoich ocen: ${pct(r.k, 0)}</small>`;
+  const r = recommend(odds, userP, m.p, noTax);
+  const margin = 1 - r.adjP * odds;          // ile bukmacher „zabiera” na tym typie (bez podatku)
+  const ds = dailyStake();
+  const marginTxt = m.margin === null ? "marża założona ~6%" : `marża rynku ${pct(m.margin)}`;
+  const info = `<small>Szansa: rynek ${pct(m.p)} (${marginTxt}) · Ty ${pct(userP)} · po korekcie <b>${pct(r.adjP)}</b><br>
+    Marża na tym typie: ${pct(margin)} · EV ${noTax ? "bez podatku" : "po podatku"}: ${r.ev >= 0 ? "+" : ""}${pct(r.ev)}</small>`;
+  let cls, head, big = "", txt, stake = 0;
+  if (r.type === "stop") { v.innerHTML = `<div class="verdict stop">STOP<small>${esc(r.reason)}</small></div>`; return; }
   if (r.type === "yes") {
-    v.innerHTML = `<div class="verdict yes">GRAJ<span class="big">${zl(r.stake)}</span>${esc(r.reason)}${info}</div>`;
-    $("btnPlace").classList.remove("hidden");
-  } else if (r.type === "stop") {
-    v.innerHTML = `<div class="verdict stop">STOP<small>${esc(r.reason)}</small></div>`;
+    cls = "yes"; head = "GRAJ — WARTOŚĆ"; stake = r.stake; txt = r.reason;
+  } else if (margin <= 0.04) {
+    cls = "ok"; head = "DOBRY KURS"; stake = ds.stake;
+    txt = `Kurs uczciwy (marża ≤ 4%). Nie zarabia na dłuższą metę${noTax ? "" : " przez podatek"}, ale to jeden z najlepszych typów, jakie da się zagrać. Graj z dziennej puli.`;
+  } else if (margin <= 0.08) {
+    cls = "meh"; head = "PRZECIĘTNY"; stake = Math.min(ds.stake, Math.max(MIN_STAKE, Math.floor(ds.stake / 2)));
+    txt = `Typowa marża Betclic. Jeśli grasz, to mniejszą stawką — albo poszukaj lepszego typu w Kuponach.`;
   } else {
-    v.innerHTML = `<div class="verdict no">NIE GRAJ<small>${esc(r.reason)}</small>${info}</div>`;
+    cls = "no"; head = "NIE GRAJ"; txt = `Marża ${pct(margin)} — bukmacher bierze tu za dużo. Ten sam typ w innym kuponie albo inny mecz da więcej.`;
   }
+  if (stake >= MIN_STAKE) big = `<span class="big">${zl(stake)}</span>`;
+  else if (cls !== "no") txt += ` ${ds.reason || ""}`;
+  lastRec = {odds, userP, marketP: m.p, ...r, stake, noTax};
+  v.innerHTML = `<div class="verdict ${cls}">${head}${big}<div style="font-weight:500;margin:4px 0 6px">${esc(txt)}</div>${info}</div>`;
+  if (stake >= MIN_STAKE) $("btnPlace").classList.remove("hidden");
 }
 ["fOdds", "fOther", "fProb"].forEach(id => $(id).addEventListener("input", analyze));
+$("fNoTax").addEventListener("change", analyze);
 $("btnPlace").onclick = () => {
-  if (!lastRec || lastRec.type !== "yes") return;
+  if (!lastRec || !(lastRec.stake >= MIN_STAKE)) return;
   S.bets.unshift({
     id: Date.now().toString(36), date: new Date().toISOString(),
     event: $("fEvent").value.trim() || "Zakład", pick: $("fPick").value.trim(),
     odds: lastRec.odds, userP: lastRec.userP, marketP: lastRec.marketP, adjP: lastRec.adjP,
-    stake: lastRec.stake, status: "pending", settledAt: null, src: "analiza"
+    stake: lastRec.stake, noTax: lastRec.noTax, status: "pending", settledAt: null, src: "analiza"
   });
   save();
   ["fEvent", "fPick", "fOdds", "fOther", "fProb"].forEach(id => $(id).value = "");

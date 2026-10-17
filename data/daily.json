@@ -1,27 +1,44 @@
 {
  "date": "2026-10-17",
- "ts": "2026-10-17T00:46:23.566Z",
- "remaining": "410",
+ "ts": "2026-10-17T00:47:37.867Z",
+ "remaining": "404",
  "coupon": {
-  "p": 0.5149053706764296,
-  "odds": 1.94,
+  "p": 0.4610010619325144,
+  "odds": 1.9865000000000002,
   "legs": [
    {
-    "id": "9a64448205fdc4b95f45641bb946706c",
-    "sport": "soccer_germany_bundesliga",
-    "market": "totals",
-    "point": 4.5,
-    "outcome": "Over",
-    "pick": "Powyżej 4,5 gola",
-    "home": "Bayern Munich",
-    "away": "RB Leipzig",
+    "id": "aef660734585649651415961a9d177c6",
+    "sport": "soccer_spain_la_liga",
+    "market": "h2h",
+    "point": null,
+    "outcome": "Villarreal",
+    "pick": "1 (Villarreal)",
+    "home": "Villarreal",
+    "away": "Elche CF",
+    "time": "2026-10-17T14:15:00Z",
+    "league": "La Liga",
+    "p": 0.6638140858214311,
+    "odds": 1.45,
+    "book": "Betclic",
+    "n": 21,
+    "src": "Pinnacle + Betfair + Matchbook"
+   },
+   {
+    "id": "846e496fc232b2fc20214754836727d0",
+    "sport": "soccer_spain_la_liga",
+    "market": "h2h",
+    "point": null,
+    "outcome": "Barcelona",
+    "pick": "2 (Barcelona)",
+    "home": "Real Betis",
+    "away": "Barcelona",
     "time": "2026-10-17T16:30:00Z",
-    "league": "Bundesliga",
-    "p": 0.5149053706764296,
-    "odds": 1.94,
-    "book": "1xBet",
-    "n": 13,
-    "src": "Pinnacle + Matchbook"
+    "league": "La Liga",
+    "p": 0.6944731541242494,
+    "odds": 1.37,
+    "book": "Betclic",
+    "n": 21,
+    "src": "Pinnacle + Betfair + Matchbook"
    }
   ]
  }

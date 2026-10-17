@@ -1,13 +1,31 @@
 {
   "leagues": [
-    ["soccer_poland_ekstraklasa", "Ekstraklasa"],
-    ["soccer_uefa_champs_league", "Liga Mistrzów"],
-    ["soccer_epl", "Premier League"],
-    ["soccer_spain_la_liga", "La Liga"],
-    ["soccer_germany_bundesliga", "Bundesliga"],
-    ["soccer_italy_serie_a", "Serie A"]
+    [
+      "soccer_poland_ekstraklasa",
+      "Ekstraklasa"
+    ],
+    [
+      "soccer_uefa_champs_league",
+      "Liga Mistrzów"
+    ],
+    [
+      "soccer_epl",
+      "Premier League"
+    ],
+    [
+      "soccer_spain_la_liga",
+      "La Liga"
+    ],
+    [
+      "soccer_germany_bundesliga",
+      "Bundesliga"
+    ],
+    [
+      "soccer_italy_serie_a",
+      "Serie A"
+    ]
   ],
-  "totals": true,
+  "totals": false,
   "tax": true,
   "minOdds": 1.2,
   "target": 2,

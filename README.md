@@ -21,6 +21,6 @@ Raz dziennie (7:30) GitHub Actions pobiera kursy do `data/odds.json`, układa ku
 2. **Powiadomienia (opcjonalnie):** zainstaluj apkę **ntfy** (Android/iOS) → *Subscribe to topic* → `bet-karycha-vkzz7it9liy8`. Potem dodaj drugi sekret: nazwa `NTFY_TOPIC`, wartość `bet-karycha-vkzz7it9liy8`.
 3. **Pierwsze uruchomienie:** repo → Actions → *Kursy i kupon dnia* → *Run workflow*.
 
-Ligi, kurs kuponu dnia i Over/Under ustawiasz w `data/config.json`. Koszt: ok. 2 zapytania na ligę dziennie (6 lig ≈ 360/mies. z darmowych 500).
+Ligi, kurs kuponu dnia i Over/Under ustawiasz w `data/config.json`. Koszt: 1 zapytanie na ligę dziennie (6 lig ≈ 180/mies. z darmowych 500; z Over/Under 2×). Kupon dnia jest układany tylko z typów z kursem Betclic.
 
 > Nie ma metody, która gwarantuje wygrywanie. Większość graczy traci na dłuższą metę.

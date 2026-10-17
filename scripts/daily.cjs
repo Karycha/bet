@@ -42,7 +42,7 @@ function dailyCoupon(odds) {
   const tax = cfg.tax === false ? 1 : 0.88;
   const legs = [];
   for (const [sport, name] of cfg.leagues) {
-    const r = Engine.eventLegs(odds.sports[sport] || [], {sport, league: name, tax, minOdds: cfg.minOdds, bookMode: "pref", now, totals: cfg.totals});
+    const r = Engine.eventLegs(odds.sports[sport] || [], {sport, league: name, tax, minOdds: cfg.minOdds, bookMode: "only", now, totals: cfg.totals});
     legs.push(...r.legs.filter(l => warsawDay(new Date(l.time)) === today));
   }
   const c = Engine.optimize(legs, {target: cfg.target, maxLegs: cfg.maxLegs, top: 1})[0];

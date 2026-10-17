@@ -18,7 +18,7 @@ Dane zakładów zostają w `localStorage` przeglądarki.
 Raz dziennie (7:30) GitHub Actions pobiera kursy do `data/odds.json`, układa kupon dnia i wysyła powiadomienie. Apka czyta kursy z repo, więc nie zużywa limitu API z telefonu.
 
 1. **Klucz API jako sekret:** repo → Settings → Secrets and variables → Actions → *New repository secret* → nazwa `ODDS_API_KEY`, wartość: Twój klucz z the-odds-api.com.
-2. **Powiadomienia (opcjonalnie):** zainstaluj apkę **ntfy** (Android/iOS) → *Subscribe to topic* → `bet-karycha-eqbq`. Potem dodaj drugi sekret: nazwa `NTFY_TOPIC`, wartość `bet-karycha-eqbq`.
+2. **Powiadomienia (opcjonalnie):** zainstaluj apkę **ntfy** (Android/iOS) → *Subscribe to topic* → `bet-karycha-vkzz7it9liy8`. Potem dodaj drugi sekret: nazwa `NTFY_TOPIC`, wartość `bet-karycha-vkzz7it9liy8`.
 3. **Pierwsze uruchomienie:** repo → Actions → *Kursy i kupon dnia* → *Run workflow*.
 
 Ligi, kurs kuponu dnia i Over/Under ustawiasz w `data/config.json`. Koszt: ok. 2 zapytania na ligę dziennie (6 lig ≈ 360/mies. z darmowych 500).

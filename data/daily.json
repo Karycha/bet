@@ -1,0 +1,28 @@
+{
+ "date": "2026-10-17",
+ "ts": "2026-10-17T00:46:23.566Z",
+ "remaining": "410",
+ "coupon": {
+  "p": 0.5149053706764296,
+  "odds": 1.94,
+  "legs": [
+   {
+    "id": "9a64448205fdc4b95f45641bb946706c",
+    "sport": "soccer_germany_bundesliga",
+    "market": "totals",
+    "point": 4.5,
+    "outcome": "Over",
+    "pick": "Powyżej 4,5 gola",
+    "home": "Bayern Munich",
+    "away": "RB Leipzig",
+    "time": "2026-10-17T16:30:00Z",
+    "league": "Bundesliga",
+    "p": 0.5149053706764296,
+    "odds": 1.94,
+    "book": "1xBet",
+    "n": 13,
+    "src": "Pinnacle + Matchbook"
+   }
+  ]
+ }
+}

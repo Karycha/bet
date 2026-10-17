@@ -30,15 +30,25 @@
 - Odrzucanie meczów, przy których bukmacherzy się nie zgadzają (świeże newsy)
 - Ruch kursów ↑↓ od pierwszego pobrania, wybór Dziś / Jutro, top 10 najpewniejszych typów
 
-## 🔜 v1.6 – Więcej rynków (opcjonalnie, kosztuje limit API)
-- Over/Under 2.5 gola, handicapy
-- Przełącznik w Ustawieniach (każdy rynek = +1 zapytanie na ligę)
+## ✅ v1.5.1–1.5.2 – Poprawki
+- „Zagrałem” działa po północy, formularz z faktyczną stawką, kursem i „bez podatku”
 
-## 🔜 v2.0 – Automat w chmurze
-- GitHub Actions raz dziennie pobiera kursy i zapisuje JSON w repo → zero zużycia limitu z telefonu
-- Powiadomienie o kuponie dnia (Telegram / ntfy.sh)
-- Synchronizacja zakładów między urządzeniami
+## ✅ v1.6 – Więcej rynków i własne kupony
+- Over/Under (Powyżej/Poniżej) w piłce, automatyczne rozliczanie
+- Własne/cudze kupony w Zakładach + osobna pozycja w statystykach
+- Stawki min. 2 zł z dziennej puli budżetu miesięcznego (zamiast 1% salda)
+- Filtr newsów: odrzuca nieaktualnych bukmacherów, pomija mecz tylko gdy ostre rynki już zareagowały
+- Silnik wydzielony do `engine.js` (wspólny dla apki i chmury)
 
-## 🔜 v2.1 – Closing Line Value
-- Zapis kursu tuż przed meczem i porównanie z kursem, po którym grałeś
-- Najlepszy realny wskaźnik, czy wybierasz dobrze, niezależnie od szczęścia
+## ✅ v2.0 – Automat w chmurze
+- GitHub Actions codziennie o 7:30 pobiera kursy do `data/odds.json` → apka nie zużywa limitu API
+- Kupon dnia liczony w chmurze + powiadomienie na telefon (ntfy)
+- Ligi i ustawienia automatu: `data/config.json`
+
+## ✅ v2.1 – Closing Line Value
+- Zapis szansy typu tuż przed meczem, CLV przy każdym typie i średni CLV w Statystykach
+
+## 🔜 v2.2 – Pomysły
+- Drugi przebieg automatu przed meczami wieczornymi (dokładniejszy CLV) – zależnie od limitu API
+- Synchronizacja zakładów między urządzeniami (zapis w repo / gist)
+- Handicapy europejskie (jeśli pojawi się źródło kursów zgodne z Betclic)

@@ -263,8 +263,9 @@ svg{width:100%;height:auto;display:block}
 <script>
 "use strict";
 const KEY = "betdoradca_v1";
-const VERSION = "1.5.0";
+const VERSION = "1.5.1";
 const CHANGELOG = [
+  ["1.5.1", "Naprawiony „Zagrałem” w kuponie dnia po północy. Przy zapisie wpisujesz faktyczną stawkę, kurs i „bez podatku”."],
   ["1.5", "Nowy silnik kuponów: optymalizator kombinacji (najwyższa szansa dla wybranego kursu), szanse z Pinnacle i giełd z korektą na faworytów, wykrywanie niepewnych meczów, ruch kursów ↑↓, wybór „Dziś/Jutro”."],
   ["1.4", "Apka na telefon: ikona, działa offline, numer wersji i ta lista."],
   ["1.3", "Statystyki wg źródła kuponu i przedziałów kursów + kalibracja szans."],
@@ -297,7 +298,7 @@ function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {}
 /* ---------- Money ---------- */
 const taxF = () => S.settings.tax ? 0.88 : 1;
 function profitOf(b) {
-  if (b.status === "won") return b.stake * taxF() * b.odds - b.stake;
+  if (b.status === "won") return b.stake * (b.noTax ? 1 : taxF()) * b.odds - b.stake;
   if (b.status === "lost") return -b.stake;
   return 0; // void/pending
 }
@@ -423,7 +424,7 @@ function betRow(b, open) {
   const stTxt = {pending: "w grze", won: "wygrany", lost: "przegrany", void: "zwrot"}[b.status];
   return `<div class="bet">
     <div class="t"><b>${esc(b.event)}</b><span class="st-${b.status}">${b.status === "pending" ? zl(b.stake) : (pl >= 0 ? "+" : "") + zl(pl)}</span></div>
-    <div class="m">${b.legs ? "" : esc(b.pick) + " @ "}${b.odds.toFixed(2)} · stawka ${zl(b.stake)} · ${stTxt} · ${new Date(b.date).toLocaleDateString("pl-PL")}</div>
+    <div class="m">${b.legs ? "" : esc(b.pick) + " @ "}${b.odds.toFixed(2)}${b.noTax ? " · bez podatku" : ""} · stawka ${zl(b.stake)} · ${stTxt} · ${new Date(b.date).toLocaleDateString("pl-PL")}</div>
     ${b.legs ? b.legs.map(l => `<div class="m">${l.result === true ? "✅" : l.result === false ? "❌" : "⏳"} ${esc(l.home)} – ${esc(l.away)}: ${esc(l.pick || l.outcome)}${l.score ? ` <span style="opacity:.8">(${esc(l.score)})</span>` : ""}</div>`).join("") : ""}
     ${open ? `<div class="acts">
       <button class="sm g" data-act="won" data-id="${b.id}">Wygrany</button>
@@ -902,7 +903,7 @@ const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "
 const todayKey = () => dayKey(new Date());
 let dayCands = {};        // dzień -> kandydaci (z aktualnych kursów)
 let selDay = null;
-let dailyLoaded = false;
+let dailyLoaded = false, loadedDay = null;
 
 function pickLabel(ev, name) {
   if (name === ev.home_team) return `1 (${name})`;
@@ -925,8 +926,8 @@ async function loadDaily(force = false) {
     const c = makeDaily(tk);
     if (c) { S.daily[tk] = c; save(); }
   }
-  dailyLoaded = true;
-  if (!selDay) selDay = tk;
+  dailyLoaded = true; loadedDay = tk;
+  if (!selDay || selDay < tk) selDay = tk;
   renderCal(); renderDay(selDay);
 }
 
@@ -996,7 +997,8 @@ function renderDay(k) {
   const isToday = k === tk, future = k > tk;
   const ds = dailyStake();
   const stake = bet ? bet.stake : ds.stake;
-  const ev = c.p * c.odds * taxF() - 1;
+  const shownOdds = bet ? bet.odds : c.odds, tf = bet?.noTax ? 1 : taxF();
+  const ev = c.p * shownOdds * tf - 1;
   const canSwap = !bet && k >= tk && dailyLoaded;
   const st = bet ? {pending: "zagrany, czeka na wynik", won: "WYGRANY", lost: "przegrany", void: "zwrot"}[bet.status] : null;
   $("dDetail").innerHTML = `
@@ -1004,14 +1006,15 @@ function renderDay(k) {
     ${c.legs.map((l, i) => legHTML(l, canSwap ? `<button class="sm ghost" style="margin-top:5px" data-swap="${k}|${i}">↻ Zamień mecz</button>` : "")).join("")}
     <div class="cbig">
       <div class="stat"><div class="v">${pct(c.p, 0)}</div><div class="k">szansa wejścia</div></div>
-      <div class="stat"><div class="v">${c.odds.toFixed(2)}</div><div class="k">kurs łączny</div></div>
+      <div class="stat"><div class="v">${shownOdds.toFixed(2)}</div><div class="k">kurs łączny</div></div>
       <div class="stat"><div class="v">${stake ? zl(stake) : "–"}</div><div class="k">stawka</div></div>
     </div>
-    <div class="hint">${stake ? `Możliwa wygrana: <b style="color:var(--text)">${zl(stake * taxF() * c.odds)}</b> · ` : ""}EV po podatku: <span style="color:${ev >= 0 ? "var(--green)" : "var(--red)"}">${ev >= 0 ? "+" : ""}${pct(ev)}</span>${!bet && ds.reason ? `<br>${esc(ds.reason)}` : ""}</div>
+    <div class="hint">${stake ? `Możliwa wygrana: <b style="color:var(--text)">${zl(stake * tf * shownOdds)}</b>${bet?.noTax ? " (bez podatku)" : ""} · ` : ""}EV${bet?.noTax ? "" : " po podatku"}: <span style="color:${ev >= 0 ? "var(--green)" : "var(--red)"}">${ev >= 0 ? "+" : ""}${pct(ev)}</span>${!bet && ds.reason ? `<br>${esc(ds.reason)}` : ""}</div>
     <div class="row">
       <button class="ghost" data-copy="${k}">Kopiuj kupon</button>
-      ${isToday && !bet && ds.stake ? `<button class="g" data-playday="${k}">Zagrałem</button>` : ""}
+      ${isToday && !bet ? `<button class="g" data-playday="${k}">Zagrałem</button>` : ""}
     </div>
+    <div id="playForm"></div>
     ${bet && bet.status === "pending" ? `<div class="hint">Wynik zaznacz w zakładce Zakłady.</div>` : ""}`;
 }
 
@@ -1027,13 +1030,36 @@ document.addEventListener("click", async e => {
   }
   const pl = e.target.closest("[data-playday]");
   if (pl) {
-    const k = pl.dataset.playday, c = S.daily[k]; const ds = dailyStake(); if (!c || !ds.stake) return;
+    const k = pl.dataset.playday;
+    if (!S.daily[k]) { const nc = makeDaily(k); if (!nc) return; S.daily[k] = nc; save(); }
+    const c = S.daily[k], ds = dailyStake();
+    $("playForm").innerHTML = `<div class="card" style="margin-top:12px;background:var(--card2)">
+      <b>Jak zagrałeś w Betclic?</b>
+      <div class="row">
+        <div><label>Stawka (zł)</label><input id="pfStake" type="number" inputmode="decimal" value="${ds.stake || 10}"></div>
+        <div><label>Kurs łączny</label><input id="pfOdds" type="number" step="0.01" inputmode="decimal" value="${c.odds.toFixed(2)}"></div>
+      </div>
+      <div class="toggle"><span>Bez podatku (promocja Betclic)</span><input id="pfNoTax" type="checkbox"></div>
+      ${ds.reason ? `<div class="hint">${esc(ds.reason)}</div>` : ""}
+      <div class="row"><button class="ghost" data-pfcancel>Anuluj</button><button class="g" data-pfsave="${k}">Zapisz</button></div>
+    </div>`;
+    $("pfStake").focus();
+    return;
+  }
+  if (e.target.closest("[data-pfcancel]")) { $("playForm").innerHTML = ""; return; }
+  const sv = e.target.closest("[data-pfsave]");
+  if (sv) {
+    const k = sv.dataset.pfsave, c = S.daily[k]; if (!c) return;
+    const num = id => parseFloat(($(id).value || "").replace(",", "."));
+    const stake = num("pfStake"), odds = num("pfOdds");
+    if (!(stake > 0) || !(odds > 1)) { sv.textContent = "Wpisz stawkę i kurs"; return; }
     const id = Date.now().toString(36);
     S.bets.unshift({
       id, date: new Date().toISOString(), daily: k,
       event: "Kupon dnia: " + c.legs.map(l => `${l.home}–${l.away}`).join(" + "),
       pick: c.legs.map(l => l.pick).join(" + "),
-      odds: c.odds, userP: c.p, marketP: c.p, adjP: c.p, stake: ds.stake, status: "pending", settledAt: null, src: "dzien",
+      odds, userP: c.p, marketP: c.p, adjP: c.p, stake, noTax: $("pfNoTax").checked,
+      status: "pending", settledAt: null, src: "dzien",
       legs: c.legs.map(l => ({...l}))
     });
     c.betId = id; save(); renderAll(); renderCal(); renderDay(k);
@@ -1089,7 +1115,7 @@ function show(tab) {
   document.querySelectorAll("main>section").forEach(s => s.classList.toggle("hidden", s.id !== "tab-" + tab));
   document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.tab === tab));
   if (tab === "stats") renderStats();
-  if (tab === "coupons") { renderCal(); if (!dailyLoaded) loadDaily(); else renderDay(selDay); }
+  if (tab === "coupons") { renderCal(); if (!dailyLoaded || loadedDay !== todayKey()) loadDaily(); else renderDay(selDay); }
 }
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => show(b.dataset.tab));
 
@@ -1108,6 +1134,9 @@ $("changelog").innerHTML = CHANGELOG.map(([v, t]) => `<div class="bet"><b>v${v}<
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("sw.js").catch(() => {});
 show(S.settings.apiKey ? "coupons" : "analyze");
 setTimeout(() => autoSettle(false), 1500);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && dailyLoaded && loadedDay !== todayKey()) loadDaily();
+});
 try { const c = localStorage.getItem(KEY + "_sports"); if (c) $("mSport").innerHTML = c; } catch {}
 if (!localStorage.getItem(KEY)) show("settings");
 </script>

@@ -1,27 +1,27 @@
 {
- "date": "2026-10-19",
- "ts": "2026-10-19T11:04:14.010Z",
- "remaining": "382",
+ "date": "2026-10-20",
+ "ts": "2026-10-20T06:23:45.779Z",
+ "remaining": "376",
  "coupon": {
-  "p": 0.416838050873151,
-  "odds": 2.23,
+  "p": 0.4627349085132808,
+  "odds": 1.98,
   "legs": [
    {
-    "id": "ce94aca384a20f6af459366da6e1dd21",
-    "sport": "soccer_italy_serie_a",
+    "id": "56989e10c299aba1a0fce210bb214775",
+    "sport": "soccer_uefa_champs_league",
     "market": "h2h",
     "point": null,
-    "outcome": "Monza",
-    "pick": "1 (Monza)",
-    "home": "Monza",
-    "away": "Cagliari",
-    "time": "2026-10-19T16:30:00Z",
-    "league": "Serie A",
-    "p": 0.416838050873151,
-    "odds": 2.23,
+    "outcome": "Atlético Madrid",
+    "pick": "2 (Atlético Madrid)",
+    "home": "VfB Stuttgart",
+    "away": "Atlético Madrid",
+    "time": "2026-10-20T19:00:00Z",
+    "league": "Liga Mistrzów",
+    "p": 0.4627349085132808,
+    "odds": 1.98,
     "book": "Betclic",
-    "n": 24,
-    "src": "Pinnacle + Betfair + Matchbook"
+    "n": 22,
+    "src": "Pinnacle + Matchbook + Betfair"
    }
   ]
  }

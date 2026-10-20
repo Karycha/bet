@@ -15,7 +15,7 @@ Dane zakładów zostają w `localStorage` przeglądarki.
 
 ## Automat w chmurze (kursy + kupon dnia na telefon)
 
-Raz dziennie (7:30) GitHub Actions pobiera kursy do `data/odds.json`, układa kupon dnia i wysyła powiadomienie. Apka czyta kursy z repo, więc nie zużywa limitu API z telefonu.
+Raz dziennie (ok. 6:00–7:00) GitHub Actions pobiera kursy do `data/odds.json`, układa kupon dnia i wysyła powiadomienie. Apka czyta kursy z repo, więc nie zużywa limitu API z telefonu.
 
 1. **Klucz API jako sekret:** repo → Settings → Secrets and variables → Actions → *New repository secret* → nazwa `ODDS_API_KEY`, wartość: Twój klucz z the-odds-api.com.
 2. **Powiadomienia (opcjonalnie):** zainstaluj apkę **ntfy** (Android/iOS) → *Subscribe to topic* → `bet-karycha-vkzz7it9liy8`. Potem dodaj drugi sekret: nazwa `NTFY_TOPIC`, wartość `bet-karycha-vkzz7it9liy8`.

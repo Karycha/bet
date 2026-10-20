@@ -41,7 +41,7 @@
 - Silnik wydzielony do `engine.js` (wspólny dla apki i chmury)
 
 ## ✅ v2.0 – Automat w chmurze
-- GitHub Actions codziennie o 7:30 pobiera kursy do `data/odds.json` → apka nie zużywa limitu API
+- GitHub Actions codziennie rano pobiera kursy do `data/odds.json` → apka nie zużywa limitu API
 - Kupon dnia liczony w chmurze + powiadomienie na telefon (ntfy)
 - Ligi i ustawienia automatu: `data/config.json`
 

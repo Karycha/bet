@@ -2,7 +2,7 @@ name: Kursy i kupon dnia
 
 on:
   schedule:
-    - cron: "30 5 * * *"   # 07:30 czasu polskiego latem (06:30 zimą)
+    - cron: "7 4 * * *"    # 06:07 czasu polskiego latem (05:07 zimą); nieokrągła minuta = mniejsze opóźnienia GitHuba
   workflow_dispatch:        # ręczne uruchomienie: Actions → Kursy i kupon dnia → Run workflow
 
 permissions:

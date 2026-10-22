@@ -1,28 +1,6 @@
 {
- "date": "2026-10-21",
- "ts": "2026-10-21T09:19:05.030Z",
- "remaining": "362",
- "coupon": {
-  "p": 0.45888223807539946,
-  "odds": 1.94,
-  "legs": [
-   {
-    "id": "2ebbccdeea2dab59717d5c3d802c3fed",
-    "sport": "soccer_uefa_champs_league",
-    "market": "h2h",
-    "point": null,
-    "outcome": "Bayern Munich",
-    "pick": "1 (Bayern Munich)",
-    "home": "Bayern Munich",
-    "away": "Arsenal",
-    "time": "2026-10-21T19:00:00Z",
-    "league": "Liga Mistrzów",
-    "p": 0.45888223807539946,
-    "odds": 1.94,
-    "book": "Betclic",
-    "n": 22,
-    "src": "Pinnacle + Matchbook + Betfair"
-   }
-  ]
- }
+ "date": "2026-10-22",
+ "ts": "2026-10-22T09:21:45.110Z",
+ "remaining": "356",
+ "coupon": null
 }

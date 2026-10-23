@@ -1,6 +1,28 @@
 {
- "date": "2026-10-22",
- "ts": "2026-10-22T09:21:45.110Z",
- "remaining": "356",
- "coupon": null
+ "date": "2026-10-23",
+ "ts": "2026-10-23T09:17:28.420Z",
+ "remaining": "350",
+ "coupon": {
+  "p": 0.4575061749005555,
+  "odds": 2.02,
+  "legs": [
+   {
+    "id": "124c70f8f3248a845bdb983a54e74720",
+    "sport": "soccer_italy_serie_a",
+    "market": "h2h",
+    "point": null,
+    "outcome": "Torino",
+    "pick": "1 (Torino)",
+    "home": "Torino",
+    "away": "Monza",
+    "time": "2026-10-23T18:45:00Z",
+    "league": "Serie A",
+    "p": 0.4575061749005555,
+    "odds": 2.02,
+    "book": "Betclic",
+    "n": 23,
+    "src": "Pinnacle + Matchbook + Betfair"
+   }
+  ]
+ }
 }

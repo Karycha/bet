@@ -25,7 +25,7 @@
       "Serie A"
     ]
   ],
-  "totals": false,
+  "totals": true,
   "tax": true,
   "minOdds": 1.2,
   "target": 2,

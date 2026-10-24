@@ -1,27 +1,27 @@
 {
- "date": "2026-10-23",
- "ts": "2026-10-23T09:17:28.420Z",
- "remaining": "350",
+ "date": "2026-10-24",
+ "ts": "2026-10-24T08:49:52.470Z",
+ "remaining": "344",
  "coupon": {
-  "p": 0.4575061749005555,
-  "odds": 2.02,
+  "p": 0.4668140203468716,
+  "odds": 2,
   "legs": [
    {
-    "id": "124c70f8f3248a845bdb983a54e74720",
-    "sport": "soccer_italy_serie_a",
+    "id": "0dae715cc56fe201f9e667917c126691",
+    "sport": "soccer_spain_la_liga",
     "market": "h2h",
     "point": null,
-    "outcome": "Torino",
-    "pick": "1 (Torino)",
-    "home": "Torino",
-    "away": "Monza",
-    "time": "2026-10-23T18:45:00Z",
-    "league": "Serie A",
-    "p": 0.4575061749005555,
-    "odds": 2.02,
+    "outcome": "Villarreal",
+    "pick": "2 (Villarreal)",
+    "home": "Valencia",
+    "away": "Villarreal",
+    "time": "2026-10-24T16:30:00Z",
+    "league": "La Liga",
+    "p": 0.4668140203468716,
+    "odds": 2,
     "book": "Betclic",
-    "n": 23,
-    "src": "Pinnacle + Matchbook + Betfair"
+    "n": 21,
+    "src": "Pinnacle + Betfair + Matchbook"
    }
   ]
  }

@@ -1,26 +1,26 @@
 {
- "date": "2026-10-26",
- "ts": "2026-10-26T10:01:57.333Z",
- "remaining": "307",
+ "date": "2026-10-27",
+ "ts": "2026-10-27T09:45:41.633Z",
+ "remaining": "295",
  "coupon": {
-  "p": 0.2814335124970477,
-  "odds": 3.3,
+  "p": 0.45788961167336106,
+  "odds": 2.02,
   "legs": [
    {
-    "id": "85e464708d03287f24590e1478aeca31",
-    "sport": "soccer_spain_la_liga",
+    "id": "c7445242bf16a8f37afef7863af45a78",
+    "sport": "soccer_italy_serie_a",
     "market": "h2h",
     "point": null,
-    "outcome": "Draw",
-    "pick": "X (remis)",
-    "home": "Sevilla",
-    "away": "CA Osasuna",
-    "time": "2026-10-26T20:00:00Z",
-    "league": "La Liga",
-    "p": 0.2814335124970477,
-    "odds": 3.3,
+    "outcome": "Lazio",
+    "pick": "2 (Lazio)",
+    "home": "Sassuolo",
+    "away": "Lazio",
+    "time": "2026-10-27T17:30:00Z",
+    "league": "Serie A",
+    "p": 0.45788961167336106,
+    "odds": 2.02,
     "book": "Betclic",
-    "n": 20,
+    "n": 23,
     "src": "Pinnacle + Betfair + Matchbook"
    }
   ]

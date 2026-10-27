@@ -191,6 +191,64 @@ function goalMarkets(ev, tax = 1) {
   return out;
 }
 
+/* ---------- Rożne i kartki (Pinnacle, linie powyżej/poniżej) ----------
+   Szansa z każdej linii .5 po zdjęciu marży; brakujące sąsiednie linie z dopasowanego rozkładu Poissona. */
+function poissonCdf(l, k) { let s = 0, t = Math.exp(-l); for (let i = 0; i <= k; i++) { s += t; t *= l / (i + 1); } return s; }
+function lineMarkets(books, key) {
+  const per = {}; // punkt -> [p(Over)]
+  for (const b of books) {
+    const m = (b.markets || []).find(m => m.key === key); if (!m) continue;
+    const pts = {};
+    m.outcomes.forEach(o => { (pts[o.point] = pts[o.point] || {})[o.name] = o.price; });
+    for (const [pt, x] of Object.entries(pts)) {
+      const v = +pt; if (Math.abs(v - Math.floor(v) - 0.5) > 1e-9 || !(x.Over > 1 && x.Under > 1)) continue;
+      (per[v] = per[v] || []).push(devig([x.Over, x.Under])[0]);
+    }
+  }
+  const lines = Object.entries(per).map(([pt, a]) => ({pt: +pt, p: median(a)})).sort((a, b) => a.pt - b.pt);
+  if (!lines.length) return [];
+  let best = {e: Infinity, l: 0};
+  for (let l = 0.5; l <= 20; l += 0.02) {
+    const e = lines.reduce((a, x) => a + (1 - poissonCdf(l, Math.floor(x.pt)) - x.p) ** 2, 0);
+    if (e < best.e) best = {e, l};
+  }
+  const lo = lines[0].pt - 1, hi = lines[lines.length - 1].pt + 1, out = [];
+  for (let pt = lo; pt <= hi + 1e-9; pt += 1) {
+    if (pt < 0.5) continue;
+    const q = lines.find(x => Math.abs(x.pt - pt) < 1e-9);
+    out.push({pt, p: q ? q.p : 1 - poissonCdf(best.l, Math.floor(pt)), model: !q});
+  }
+  return out;
+}
+const EXTRA = {corners: {key: "alternate_totals_corners", name: "Rzuty rożne"}, cards: {key: "alternate_totals_cards", name: "Kartki"}};
+const EST_MARGIN_EXTRA = 0.08; // Betclic zwykle bierze więcej na rożnych i kartkach
+function extraLegs(extras, {tax = 1, minOdds = 1.05, now = Date.now(), evFilter = null, leagueName = {}} = {}) {
+  const legs = [];
+  for (const [id, ev] of Object.entries(extras?.events || {})) {
+    if (evFilter && !evFilter(ev)) continue;
+    if (Date.parse(ev.commence_time) < now + 10 * 60000) continue;
+    const books = (ev.bookmakers || []).filter(b => SHARP.includes(b.key));
+    const use = books.length ? books : (ev.bookmakers || []);
+    for (const [market, def] of Object.entries(EXTRA)) {
+      for (const ln of lineMarkets(use, def.key)) {
+        for (const [outcome, p] of [["Over", ln.p], ["Under", 1 - ln.p]]) {
+          if (!(p > 0.04 && p < 0.97)) continue;
+          const odds = Math.round(100 / (p * (1 + EST_MARGIN_EXTRA))) / 100;
+          if (odds < minOdds || odds * tax < 1.03) continue;
+          legs.push({
+            id, sport: ev.sport, market, point: ln.pt, outcome,
+            pick: `${def.name}: ${outcome === "Over" ? "powyżej" : "poniżej"} ${fmtPt(ln.pt)}`,
+            home: ev.home_team, away: ev.away_team, time: ev.commence_time, league: leagueName[ev.sport] || ev.sport,
+            p, odds, book: "szac. Betclic", est: true, minOdds: Math.round(100 / p) / 100,
+            value: p * odds * tax, n: use.length, src: (ln.model ? "model z linii " : "") + (books.length ? "Pinnacle" : "rynek"), manual: true
+          });
+        }
+      }
+    }
+  }
+  return legs;
+}
+
 function unitFor(sport) { return sport.startsWith("basketball") ? "pkt" : "gola"; }
 function pickLabel(ev, name, market = "h2h", point = null, sport = "soccer") {
   if (market === "totals") return `${name === "Over" ? "Powyżej" : "Poniżej"} ${String(point).replace(".", ",")} ${unitFor(sport)}`;
@@ -287,6 +345,7 @@ function optimize(legs, {target, maxLegs, exclude = [], top = 3}) {
 
 // Rozliczenie pojedynczego typu na podstawie wyniku (h, a = gole/punkty gospodarzy i gości).
 function legResult(leg, home, away, h, a) {
+  if (leg.market === "corners" || leg.market === "cards") return undefined; // brak danych w wynikach – ręcznie
   if (leg.market === "totals") {
     const t = h + a;
     return leg.outcome === "Over" ? t > leg.point : t < leg.point;
@@ -299,7 +358,7 @@ function legResult(leg, home, away, h, a) {
   return winner === leg.outcome;
 }
 
-const Engine = {SHARP, MIN_STAKE, EST_MARGIN, fitGoals, dcGrid, goalMarkets, devig, median, analyzeOutcomes, analyzeEvent, analyzeTotals, pickLabel, eventLegs, legKeyOf, optimize, legResult};
+const Engine = {SHARP, MIN_STAKE, EST_MARGIN, EXTRA, extraLegs, lineMarkets, fitGoals, dcGrid, goalMarkets, devig, median, analyzeOutcomes, analyzeEvent, analyzeTotals, pickLabel, eventLegs, legKeyOf, optimize, legResult};
 root.Engine = Engine;
 if (typeof module !== "undefined" && module.exports) module.exports = Engine;
 })(typeof globalThis !== "undefined" ? globalThis : this);

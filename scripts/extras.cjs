@@ -6,7 +6,7 @@ const KEY = process.env.ODDS_API_KEY;
 const API = "https://api.the-odds-api.com/v4";
 const ROOT = path.join(__dirname, "..");
 const cfg = JSON.parse(fs.readFileSync(path.join(ROOT, "data/config.json"), "utf8"));
-const MARKETS = process.env.MARKETS || "alternate_totals_corners,alternate_totals_cards,btts,double_chance";
+const MARKETS = process.env.MARKETS || "alternate_totals_corners,alternate_totals_cards";
 const warsawDay = d => new Intl.DateTimeFormat("sv-SE", {timeZone: "Europe/Warsaw"}).format(d);
 const DAY = process.env.DAY || warsawDay(new Date());
 (async () => {
@@ -17,7 +17,7 @@ const DAY = process.env.DAY || warsawDay(new Date());
     const evs = await (await fetch(`${API}/sports/${sport}/events?apiKey=${KEY}`)).json();
     if (!Array.isArray(evs)) { console.warn(sport, evs); continue; }
     for (const e of evs.filter(e => warsawDay(new Date(e.commence_time)) === DAY)) {
-      const r = await fetch(`${API}/sports/${sport}/events/${e.id}/odds?regions=eu&markets=${MARKETS}&oddsFormat=decimal&apiKey=${KEY}`);
+      const r = await fetch(`${API}/sports/${sport}/events/${e.id}/odds?bookmakers=pinnacle&markets=${MARKETS}&oddsFormat=decimal&apiKey=${KEY}`);
       out.remaining = r.headers.get("x-requests-remaining") ?? out.remaining;
       const last = r.headers.get("x-requests-last");
       if (!r.ok) { console.warn(e.home_team, r.status, await r.text()); continue; }

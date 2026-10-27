@@ -305,8 +305,9 @@ svg{width:100%;height:auto;display:block}
 <script>
 "use strict";
 const KEY = "betdoradca_v1";
-const VERSION = "3.0.0";
+const VERSION = "3.1.0";
 const CHANGELOG = [
+  ["3.1", "Rożne i kartki w generatorze (linie z Pinnacle + model), pobierane na żądanie. Zielone „nasz model” tylko gdy jest przewaga."],
   ["3.0", "Nowy generator AKO: wybór dnia → rynki (wynik, gole, BTTS) → profil (bezpieczny/zbalansowany/agresywny) → kupon i karty najlepszych typów. Model goli liczy szanse na rynki bramkowe; przy szacowanych kursach pokazuje minimalny kurs, od którego warto grać."],
   ["2.2", "Analiza w 4 stopniach: Wartość / Dobry kurs / Przeciętny / Nie graj, z sugerowaną stawką i przełącznikiem „bez podatku”."],
   ["2.1.1", "Kupon dnia tylko z kursami Betclic, Over/Under domyślnie wyłączone (brak w źródle dla Betclic), generator domyślnie „Tylko Betclic”."],
@@ -487,7 +488,7 @@ function betRow(b, open) {
   return `<div class="bet">
     <div class="t"><b>${esc(b.event)}</b><span class="st-${b.status}">${b.status === "pending" ? zl(b.stake) : (pl >= 0 ? "+" : "") + zl(pl)}</span></div>
     <div class="m">${b.legs || !b.pick ? "" : esc(b.pick) + " @ "}${b.odds.toFixed(2)}${b.noTax ? " · bez podatku" : ""} · stawka ${zl(b.stake)} · ${stTxt} · ${new Date(b.date).toLocaleDateString("pl-PL")}</div>
-    ${b.legs ? b.legs.map(l => `<div class="m">${l.result === true ? "✅" : l.result === false ? "❌" : "⏳"} ${esc(l.home)} – ${esc(l.away)}: ${esc(l.pick || l.outcome)}${l.score ? ` <span style="opacity:.8">(${esc(l.score)})</span>` : ""}${clvOf(l) !== null ? ` · <span style="color:${clvOf(l) >= 0 ? "var(--green)" : "var(--red)"}">CLV ${clvOf(l) >= 0 ? "+" : ""}${pct(clvOf(l))}</span>` : ""}</div>`).join("") : ""}
+    ${b.legs ? b.legs.map(l => `<div class="m">${l.result === true ? "✅" : l.result === false ? "❌" : l.market === "corners" || l.market === "cards" ? "✋" : "⏳"} ${esc(l.home)} – ${esc(l.away)}: ${esc(l.pick || l.outcome)}${l.score ? ` <span style="opacity:.8">(${esc(l.score)})</span>` : ""}${clvOf(l) !== null ? ` · <span style="color:${clvOf(l) >= 0 ? "var(--green)" : "var(--red)"}">CLV ${clvOf(l) >= 0 ? "+" : ""}${pct(clvOf(l))}</span>` : ""}</div>`).join("") : ""}
     ${open ? `<div class="acts">
       <button class="sm g" data-act="won" data-id="${b.id}">Wygrany</button>
       <button class="sm r" data-act="lost" data-id="${b.id}">Przegrany</button>
@@ -542,7 +543,9 @@ async function autoSettle(manual = false) {
       const sc = Object.fromEntries(e.scores.map(x => [x.name, parseFloat(x.score)]));
       const h = sc[e.home_team], a = sc[e.away_team];
       if (!isFinite(h) || !isFinite(a)) continue;
-      l.result = Engine.legResult(l, e.home_team, e.away_team, h, a); l.score = `${h}:${a}`;
+      const res = Engine.legResult(l, e.home_team, e.away_team, h, a); l.score = `${h}:${a}`;
+      if (res === undefined) continue; // rożne/kartki – zaznaczasz ręcznie
+      l.result = res;
     }
     const res = b.legs.map(l => l.result);
     const ns = res.includes(false) ? "lost" : res.every(r => r === true) ? "won" : "pending";
@@ -839,8 +842,8 @@ const PROFILES = {
 const MK = {
   wynik: {name: "Wynik meczu", desc: "1X2 i podwójna szansa", markets: ["h2h", "dc"]},
   gole: {name: "Gole", desc: "Over/Under, BTTS, gole drużyn", markets: ["totals", "btts", "team", "cs"]},
-  kartki: {name: "Kartki", desc: "brak danych w źródle", off: true},
-  rozne: {name: "Rożne", desc: "brak danych w źródle", off: true}
+  kartki: {name: "Kartki", desc: "liczba kartek · Pinnacle", markets: ["cards"], extra: true},
+  rozne: {name: "Rożne", desc: "rzuty rożne · Pinnacle", markets: ["corners"], extra: true}
 };
 const W = (() => { try { return JSON.parse(localStorage.getItem(KEY + "_wiz")) || {}; } catch { return {}; } })();
 W.day = W.day ?? 0; W.mk = W.mk || {wynik: true, gole: true}; W.prof = W.prof || "safe";
@@ -862,7 +865,7 @@ function renderWizard() {
 }
 document.addEventListener("click", e => {
   const d = e.target.closest("[data-wday]"); if (d) { W.day = +d.dataset.wday; renderWizard(); return; }
-  const m = e.target.closest("[data-wmk]"); if (m) { const k = m.dataset.wmk; if (MK[k].off) return; W.mk[k] = !W.mk[k]; if (!W.mk.wynik && !W.mk.gole) W.mk[k] = true; saveW(); renderWizard(); return; }
+  const m = e.target.closest("[data-wmk]"); if (m) { const k = m.dataset.wmk; if (MK[k].off) return; W.mk[k] = !W.mk[k]; if (!Object.values(W.mk).some(Boolean)) W.mk[k] = true; saveW(); renderWizard(); return; }
   const p = e.target.closest("[data-wprof]"); if (p) { W.prof = p.dataset.wprof; saveW(); renderWizard(); }
 });
 $("wLegs").addEventListener("change", saveW);
@@ -877,6 +880,34 @@ async function loadDayCounts() {
   dayCounts = c; renderWizard();
 }
 
+// Rożne i kartki: z chmury (data/extras.json) albo na żywo z Pinnacle (1 zapytanie na mecz, oba rynki).
+async function getExtras(day) {
+  const ck = KEY + "_extras_" + day;
+  try { const c = JSON.parse(localStorage.getItem(ck)); if (c && Date.now() - c.ts < 6 * 3600000) return c.data; } catch {}
+  try {
+    const r = await fetch("data/extras.json", {cache: "no-store"});
+    if (r.ok) { const d = await r.json(); if (d.day === day && Date.now() - Date.parse(d.ts) < 12 * 3600000 && Object.keys(d.events).length) return d; }
+  } catch {}
+  if (!S.settings.apiKey) throw new Error("Rożne i kartki pobiera się na żywo — dodaj klucz API w Ustawieniach.");
+  const list = [];
+  for (const sp of selLeagues().filter(x => x.startsWith("soccer"))) {
+    let evs; try { evs = await api(`/sports/${sp}/events`); } catch (e) { if (/klucz|401/.test(e.message)) throw e; continue; } // lista meczów: bez kosztu
+    for (const e of evs) if (dayKey(new Date(e.commence_time)) === day && Date.parse(e.commence_time) > Date.now()) list.push({sp, e});
+  }
+  if (!list.length) return {events: {}};
+  if (!confirm(`Rożne i kartki dla ${list.length} meczów zużyją ok. ${list.length * 2} zapytań z limitu API. Pobrać?`)) return {events: {}};
+  const out = {ts: new Date().toISOString(), day, events: {}};
+  for (const {sp, e} of list) {
+    try {
+      const d = await api(`/sports/${sp}/events/${e.id}/odds?bookmakers=pinnacle&markets=alternate_totals_corners,alternate_totals_cards&oddsFormat=decimal`);
+      out.events[e.id] = {sport: sp, home_team: d.home_team, away_team: d.away_team, commence_time: d.commence_time,
+        bookmakers: (d.bookmakers || []).map(b => ({key: b.key, title: b.title, markets: (b.markets || []).map(m => ({key: m.key, outcomes: m.outcomes}))}))};
+    } catch (err) { if (/klucz|401/.test(err.message)) throw err; }
+  }
+  try { localStorage.setItem(ck, JSON.stringify({ts: Date.now(), data: out})); } catch {}
+  return out;
+}
+
 async function buildCoupons() {
   if (!selLeagues().length) { $("cInfo").textContent = "Zaznacz przynajmniej jedną ligę."; return; }
   $("cList").innerHTML = `<div class="card hint">Liczę szanse i układam kupon…</div>`;
@@ -887,6 +918,13 @@ async function buildCoupons() {
   try {
     data = await collectLegs(false, $("cBook").value, {goals: !!W.mk.gole || allowed.has("dc"), minOdds: 1.05, evFilter: ev => dayKey(new Date(ev.commence_time)) === day});
   } catch (e) { $("cList").innerHTML = ""; $("cInfo").textContent = e.message + (/klucz/.test(e.message) ? " Albo skonfiguruj automat w chmurze (README)." : ""); return; }
+  if (W.mk.kartki || W.mk.rozne) {
+    try {
+      const ex = await getExtras(day);
+      const leagueName = Object.fromEntries(LEAGUES.map(l => [l[0], l[1]]));
+      data.legs.push(...Engine.extraLegs(ex, {tax: taxF(), minOdds: 1.05, leagueName, evFilter: ev => dayKey(new Date(ev.commence_time)) === day && selLeagues().includes(ev.sport)}));
+    } catch (e) { $("cInfo").textContent = e.message; }
+  }
   const legs = data.legs.filter(l => allowed.has(l.market || "h2h") && l.odds >= prof.lo && l.odds <= prof.hi);
   const matches = new Set(data.legs.map(l => l.id)).size;
   const unsureN = new Set(data.unsure.map(u => u.id)).size;
@@ -904,6 +942,8 @@ async function buildCoupons() {
   html += renderCoupon(mk(A), `🏆 Kupon ${prof.name.toLowerCase()} · ${A.length} ${A.length === 1 ? "mecz" : "mecze"}`);
   const B = ranked.slice(n, 2 * n);
   if (B.length === n) html += renderCoupon(mk(B), "Alternatywa (inne mecze)");
+  const extraTop = ranked.length && (W.mk.kartki || W.mk.rozne) ? legs.filter(l => l.manual).sort((a, b) => b.p - a.p).filter((l, i, a) => a.findIndex(x => x.id === l.id && x.market === l.market) === i).slice(0, 6) : [];
+  if (extraTop.length) html += `<div class="card"><h2>🚩 Rożne i kartki</h2><div class="hint">Najpewniejsze linie w profilu. Rozliczasz je ręcznie w Zakładach (brak ich w wynikach źródła). Kartki = liczba kartek w meczu — sprawdź w regulaminie Betclic, jak liczy czerwoną.</div>${extraTop.map((l, i) => valueCard(l, i + 1)).join("")}</div>`;
   html += `<div class="card"><h2>⭐ Najlepsze typy</h2><div class="hint">Jeden typ na mecz, w zakresie kursów profilu. „Przewaga” = szansa × kurs − 1 (bez podatku), zwykle lekko ujemna. Przy rynkach bez kursu w źródle: „≥” = kurs, jaki Betclic zwykle daje; wyższy = lepiej.</div>
     ${ranked.slice(0, 8).map((l, i) => valueCard(l, i + 1)).join("")}</div>`;
   $("cList").innerHTML = html;
@@ -917,7 +957,7 @@ function valueCard(l, rank) {
     ${l.est
       ? `<div class="edge" style="color:var(--text)">≥ ${l.odds.toFixed(2)}</div><div class="hint" style="text-align:center;margin:0">kurs w normie · od <b style="color:var(--green)">${l.minOdds.toFixed(2)}</b> masz przewagę</div>`
       : `<div class="edge" style="color:${edge >= 0 ? "var(--green)" : "var(--red)"}">${edge >= 0 ? "+" : ""}${pct(edge)}</div><div class="hint" style="text-align:center;margin:0">przewaga przy kursie Betclic</div>`}
-    <div class="g3"><div>${l.est ? "~" : ""}${l.odds.toFixed(2)}<small>kurs</small></div><div>${pct(1 / l.odds, 0)}<small>implikowana</small></div><div class="hl">${pct(l.p, 0)}<small>nasz model</small></div></div>
+    <div class="g3"><div>${l.est ? "~" : ""}${l.odds.toFixed(2)}<small>kurs</small></div><div>${pct(1 / l.odds, 0)}<small>implikowana</small></div><div class="${l.p > 1 / l.odds ? "hl" : ""}">${pct(l.p, 0)}<small>nasz model</small></div></div>
   </div>`;
 }
 const optimize = Engine.optimize;

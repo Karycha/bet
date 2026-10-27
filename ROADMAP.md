@@ -58,6 +58,11 @@
 - Rozliczanie nowych rynków, automat pobiera Over/Under
 - Tenis na żądanie (workflow „Kursy tenis”)
 
+## ✅ v3.1 – Rożne i kartki
+- Linie powyżej/poniżej z Pinnacle + model (Poisson) dla sąsiednich linii
+- Pobieranie na żądanie (apka pyta o zgodę na zużycie limitu) albo z chmury (workflow „Rożne i kartki”)
+- Rozliczanie ręczne (brak tych statystyk w źródle wyników)
+
 ## 🔜 Pomysły
 - Drugi przebieg automatu przed meczami wieczornymi (dokładniejszy CLV) – zależnie od limitu API
 - Synchronizacja zakładów między urządzeniami (zapis w repo / gist)

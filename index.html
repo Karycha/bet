@@ -61,6 +61,30 @@ nav button{flex:1;margin:0;border-radius:0;background:none;color:var(--mute);fon
 .leg .m{font-size:12px;color:var(--mute)}
 .cbig{display:flex;gap:8px;margin:10px 0}
 .cbig .stat{flex:1}
+.wstep{display:flex;align-items:center;gap:8px;margin:16px 0 8px;font-weight:600}
+.wstep .n{width:22px;height:22px;border-radius:50%;background:var(--blue);color:#081220;display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+.days{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.tile{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:9px 6px;text-align:center;color:var(--text);margin:0;width:auto;font-weight:500}
+.tile.on{border-color:var(--blue);background:#16314f}
+.tile.off{opacity:.4}
+.tile .k{font-size:11px;color:var(--mute);text-transform:uppercase}
+.tile .big{font-size:20px;font-weight:700;line-height:1.2}
+.mk{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.mk .tile,.prof .tile{text-align:left;padding:11px}
+.mk .tile b,.prof .tile b{display:block;font-size:14px}
+.mk .tile span,.prof .tile span{font-size:11.5px;color:var(--mute)}
+.prof{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.prof .tile .ic{font-size:18px}
+.prof .tile .rg{color:var(--green);font-weight:600;font-size:12px}
+.vb{background:linear-gradient(180deg,#1b2230,#151a23);border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:10px}
+.vb .hd{display:flex;gap:8px;align-items:center}
+.vb .rk{width:22px;height:22px;border-radius:50%;background:#ffc857;color:#2a2000;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.vb .pick{margin:8px 0 2px;text-align:center;font-size:12.5px;color:#a6f3c5;font-weight:600}
+.vb .edge{text-align:center;font-size:28px;font-weight:800}
+.vb .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.vb .g3 div{background:var(--card2);border-radius:10px;padding:8px;text-align:center;font-weight:700}
+.vb .g3 small{display:block;font-weight:400;color:var(--mute);font-size:11px}
+.vb .g3 .hl{background:#173826;color:var(--green)}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:12px 0}
 .cal .h{font-size:11px;color:var(--mute);text-align:center}
 .cal .d{aspect-ratio:1;border-radius:8px;background:var(--card2);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;color:var(--mute);padding:0;margin:0;width:auto;font-weight:500}
@@ -124,6 +148,27 @@ svg{width:100%;height:auto;display:block}
 <!-- ============ KUPONY ============ -->
 <section id="tab-coupons" class="hidden">
   <div class="card">
+    <h2>Generator AKO</h2>
+    <div class="hint">Szanse z najostrzejszych rynków (Pinnacle, Betfair) + model goli. Kursy 1X2 prosto z Betclic, pozostałe rynki szacowane — przy każdym typie widzisz minimalny kurs, od którego warto grać.</div>
+    <div class="wstep"><span class="n">1</span>Wybierz dzień</div>
+    <div id="wDays" class="days"></div>
+    <div class="wstep"><span class="n">2</span>Wybierz rynki</div>
+    <div id="wMk" class="mk"></div>
+    <div class="wstep"><span class="n">3</span>Profil kuponu</div>
+    <div id="wProf" class="prof"></div>
+    <div class="row">
+      <div><label>Liczba meczów</label>
+        <select id="wLegs"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option></select></div>
+      <div><label>Kursy 1X2</label>
+        <select id="cBook"><option value="only" selected>Betclic</option><option value="best">Najlepsze na rynku</option></select></div>
+    </div>
+    <label>Ligi</label>
+    <div id="cLeagues" class="chips"></div>
+    <button id="btnCoupons">Generuj kupon</button>
+    <div id="cInfo" class="hint"></div>
+  </div>
+  <div id="cList"></div>
+  <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <h2 style="margin:0">Kupon dnia</h2>
       <button id="btnDailyRefresh" class="sm ghost">Odśwież kursy</button>
@@ -132,27 +177,6 @@ svg{width:100%;height:auto;display:block}
     <div id="dCal" class="cal"></div>
     <div id="dDetail"></div>
   </div>
-  <div class="card">
-    <h2>Generator kuponów</h2>
-    <div class="hint">Przeszukuje wszystkie kombinacje meczów i wybiera tę z najwyższą szansą wejścia dla wybranego kursu. Szanse liczone z najostrzejszych rynków (Pinnacle, giełdy Betfair) metodą usuwającą marżę z korektą na faworytów.</div>
-    <label>Ligi</label>
-    <div id="cLeagues" class="chips"></div>
-    <div class="row">
-      <div><label>Kiedy</label>
-        <select id="cWhen"><option value="today" selected>Dziś</option><option value="tomorrow">Jutro</option><option value="48">48 h</option><option value="168">7 dni</option></select></div>
-      <div><label>Kurs łączny</label>
-        <select id="cTarget"><option value="1.3">~1.30</option><option value="1.5">~1.50</option><option value="1.8">~1.80</option><option value="2" selected>~2.00</option><option value="2.5">~2.50</option><option value="3">~3.00</option><option value="5">~5.00</option><option value="10">~10.00</option></select></div>
-    </div>
-    <div class="row">
-      <div><label>Maks. meczów</label>
-        <select id="cMax"><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option></select></div>
-      <div><label>Kursy</label>
-        <select id="cBook"><option value="only" selected>Tylko Betclic</option><option value="pref">Betclic, jeśli jest</option><option value="best">Najlepsze na rynku</option></select></div>
-    </div>
-    <button id="btnCoupons">Wygeneruj najlepszy kupon</button>
-    <div id="cInfo" class="hint"></div>
-  </div>
-  <div id="cList"></div>
 </section>
 
 <!-- ============ RYNEK ============ -->
@@ -281,8 +305,9 @@ svg{width:100%;height:auto;display:block}
 <script>
 "use strict";
 const KEY = "betdoradca_v1";
-const VERSION = "2.2.0";
+const VERSION = "3.0.0";
 const CHANGELOG = [
+  ["3.0", "Nowy generator AKO: wybór dnia → rynki (wynik, gole, BTTS) → profil (bezpieczny/zbalansowany/agresywny) → kupon i karty najlepszych typów. Model goli liczy szanse na rynki bramkowe; przy szacowanych kursach pokazuje minimalny kurs, od którego warto grać."],
   ["2.2", "Analiza w 4 stopniach: Wartość / Dobry kurs / Przeciętny / Nie graj, z sugerowaną stawką i przełącznikiem „bez podatku”."],
   ["2.1.1", "Kupon dnia tylko z kursami Betclic, Over/Under domyślnie wyłączone (brak w źródle dla Betclic), generator domyślnie „Tylko Betclic”."],
   ["2.1", "Closing Line Value: apka zapisuje szansę typu tuż przed meczem i pokazuje CLV przy zakładach i w Statystykach."],
@@ -664,7 +689,7 @@ function saveSnap() {
 }
 
 // Zbiera wszystkie możliwe typy z wybranych lig.
-async function collectLegs(force = false, bookMode = "pref") {
+async function collectLegs(force = false, bookMode = "pref", extra = {}) {
   const leagueName = Object.fromEntries(LEAGUES.map(l => [l[0], l[1]]));
   const now = Date.now(), legs = [], unsure = [], fair = {};
   let errors = 0;
@@ -673,7 +698,7 @@ async function collectLegs(force = false, bookMode = "pref") {
     let evs;
     try { evs = await getEvents(sp, force); }
     catch (e) { if (/klucz|401/.test(e.message)) throw e; errors++; continue; }
-    const r = Engine.eventLegs(evs, {sport: sp, league: leagueName[sp] || sp, tax: taxF(), minOdds: S.settings.minOdds, bookMode, now, totals: S.settings.totals});
+    const r = Engine.eventLegs(evs, {sport: sp, league: leagueName[sp] || sp, tax: taxF(), minOdds: S.settings.minOdds, bookMode, now, totals: S.settings.totals, ...extra});
     r.legs.forEach(l => { l.move = trackMove(Engine.legKeyOf(l.id, l.market, l.outcome, l.point), l.p, l.time); legs.push(l); });
     unsure.push(...r.unsure); Object.assign(fair, r.fair);
   }
@@ -715,10 +740,10 @@ function legHTML(l, extra = "") {
     ? ` · <span style="color:${l.move > 0 ? "var(--green)" : "var(--red)"}">${l.move > 0 ? "↑" : "↓"}${Math.abs(l.move * 100).toFixed(0)} pkt</span>` : "";
   return `<div class="leg"><div><b>${esc(l.home)} – ${esc(l.away)}</b>
     <div class="m">${esc(l.league)} · ${t} · typ: <b style="color:var(--text)">${esc(l.pick)}</b></div>${extra}</div>
-    <div style="text-align:right;white-space:nowrap">${l.odds.toFixed(2)}<div class="m">${pct(l.p, 0)}${mv} · ${esc(l.book)}</div></div></div>`;
+    <div style="text-align:right;white-space:nowrap">${l.est ? "~" : ""}${l.odds.toFixed(2)}<div class="m">${pct(l.p, 0)}${mv} · ${l.est ? `plus od ${l.minOdds.toFixed(2)}` : esc(l.book)}</div></div></div>`;
 }
 const couponText = (title, c) => `${title}\n` + c.legs.map(l =>
-  `${l.home} – ${l.away} (${new Date(l.time).toLocaleString("pl-PL", {weekday: "short", hour: "2-digit", minute: "2-digit"})}): ${l.pick} @ ${l.odds.toFixed(2)}`).join("\n") + `\nKurs łączny: ${c.odds.toFixed(2)}`;
+  `${l.home} – ${l.away} (${new Date(l.time).toLocaleString("pl-PL", {weekday: "short", hour: "2-digit", minute: "2-digit"})}): ${l.pick} @ ${l.est ? "~" : ""}${l.odds.toFixed(2)}${l.est ? ` (nie niżej niż ~${l.odds.toFixed(2)})` : ""}`).join("\n") + `\nKurs łączny: ${c.legs.some(l => l.est) ? "~" : ""}${c.odds.toFixed(2)}`;
 
 function renderEvent({ev, res, src, n}) {
   const when = new Date(ev.commence_time).toLocaleString("pl-PL", {weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"});
@@ -768,7 +793,7 @@ document.addEventListener("click", e => {
   let sel = selLeagues();
   sel = sel.includes(t.dataset.league) ? sel.filter(x => x !== t.dataset.league) : [...sel, t.dataset.league];
   try { localStorage.setItem(KEY + "_leagues", JSON.stringify(sel)); } catch {}
-  renderLeagueChips();
+  renderLeagueChips(); loadDayCounts();
 });
 
 /* ---------- v2.0 Kursy z chmury (data/odds.json, zapis z GitHub Actions) ---------- */
@@ -805,36 +830,95 @@ async function getEvents(sport, force = false) {
   return data;
 }
 
+/* ---------- v3.0 Kreator kuponu: dzień → rynki → profil → kupon ---------- */
+const PROFILES = {
+  safe: {name: "Bezpieczny", ic: "🛡️", lo: 1.25, hi: 1.75, desc: "pewniaki"},
+  bal: {name: "Zbalansowany", ic: "⚖️", lo: 1.55, hi: 2.40, desc: "środek"},
+  aggr: {name: "Agresywny", ic: "⚡", lo: 2.10, hi: 5.50, desc: "wysokie kursy"}
+};
+const MK = {
+  wynik: {name: "Wynik meczu", desc: "1X2 i podwójna szansa", markets: ["h2h", "dc"]},
+  gole: {name: "Gole", desc: "Over/Under, BTTS, gole drużyn", markets: ["totals", "btts", "team", "cs"]},
+  kartki: {name: "Kartki", desc: "brak danych w źródle", off: true},
+  rozne: {name: "Rożne", desc: "brak danych w źródle", off: true}
+};
+const W = (() => { try { return JSON.parse(localStorage.getItem(KEY + "_wiz")) || {}; } catch { return {}; } })();
+W.day = W.day ?? 0; W.mk = W.mk || {wynik: true, gole: true}; W.prof = W.prof || "safe";
+const saveW = () => { try { localStorage.setItem(KEY + "_wiz", JSON.stringify({mk: W.mk, prof: W.prof, legs: $("wLegs").value})); } catch {} };
+if (W.legs) $("wLegs").value = W.legs;
+let dayCounts = {};
+const wDayKey = off => dayKey(new Date(Date.now() + off * 864e5));
+function renderWizard() {
+  const names = ["DZIŚ", "JUTRO"];
+  $("wDays").innerHTML = Array.from({length: 8}, (_, i) => {
+    const d = new Date(Date.now() + i * 864e5), k = dayKey(d), n = dayCounts[k];
+    const lab = names[i] || d.toLocaleDateString("pl-PL", {weekday: "short"}).replace(".", "").toUpperCase();
+    return `<button class="tile ${W.day === i ? "on" : ""} ${n === 0 ? "off" : ""}" data-wday="${i}"><div class="k">${lab}</div><div class="big">${d.getDate()}</div><div class="k">${n === undefined ? "&nbsp;" : n + " mecz."}</div></button>`;
+  }).join("");
+  $("wMk").innerHTML = Object.entries(MK).map(([k, m]) =>
+    `<button class="tile ${W.mk[k] ? "on" : ""} ${m.off ? "off" : ""}" data-wmk="${k}" ${m.off ? "disabled" : ""}><b>${W.mk[k] ? "✓ " : ""}${m.name}</b><span>${m.desc}</span></button>`).join("");
+  $("wProf").innerHTML = Object.entries(PROFILES).map(([k, p]) =>
+    `<button class="tile ${W.prof === k ? "on" : ""}" data-wprof="${k}"><div class="ic">${p.ic}</div><b>${p.name}</b><span class="rg">${p.lo.toFixed(2)}–${p.hi.toFixed(2)}</span><br><span>kurs na typ</span></button>`).join("");
+}
+document.addEventListener("click", e => {
+  const d = e.target.closest("[data-wday]"); if (d) { W.day = +d.dataset.wday; renderWizard(); return; }
+  const m = e.target.closest("[data-wmk]"); if (m) { const k = m.dataset.wmk; if (MK[k].off) return; W.mk[k] = !W.mk[k]; if (!W.mk.wynik && !W.mk.gole) W.mk[k] = true; saveW(); renderWizard(); return; }
+  const p = e.target.closest("[data-wprof]"); if (p) { W.prof = p.dataset.wprof; saveW(); renderWizard(); }
+});
+$("wLegs").addEventListener("change", saveW);
+// Liczba meczów na każdy dzień (z kursów w pamięci/chmurze – bez kosztów)
+async function loadDayCounts() {
+  const c = {};
+  for (const sp of selLeagues()) {
+    let evs; try { evs = await getEvents(sp, false); } catch { continue; }
+    for (const ev of evs || []) { if (Date.parse(ev.commence_time) < Date.now()) continue; const k = dayKey(new Date(ev.commence_time)); c[k] = (c[k] || 0) + 1; }
+  }
+  for (let i = 0; i < 8; i++) c[wDayKey(i)] = c[wDayKey(i)] || 0;
+  dayCounts = c; renderWizard();
+}
+
 async function buildCoupons() {
   if (!selLeagues().length) { $("cInfo").textContent = "Zaznacz przynajmniej jedną ligę."; return; }
-  $("cList").innerHTML = `<div class="card hint">Pobieram kursy i liczę kombinacje…</div>`;
-  const when = $("cWhen").value, target = +$("cTarget").value, maxLegs = +$("cMax").value;
+  $("cList").innerHTML = `<div class="card hint">Liczę szanse i układam kupon…</div>`;
+  await new Promise(r => setTimeout(r, 30));
+  const day = wDayKey(W.day), prof = PROFILES[W.prof], n = +$("wLegs").value;
+  const allowed = new Set(Object.entries(W.mk).filter(([, v]) => v).flatMap(([k]) => MK[k].markets || []));
   let data;
-  try { data = await collectLegs(false, $("cBook").value); }
-  catch (e) { $("cList").innerHTML = ""; $("cInfo").textContent = e.message + (/klucz/.test(e.message) ? " Albo skonfiguruj automat w chmurze (README)." : ""); return; }
-  const tk = todayKey(), tm = dayKey(new Date(Date.now() + 864e5)), now = Date.now();
-  const inWindow = time => {
-    const t = Date.parse(time);
-    if (when === "today") return dayKey(new Date(t)) === tk;
-    if (when === "tomorrow") return dayKey(new Date(t)) === tm;
-    return t <= now + (+when) * 3600000;
-  };
-  const legs = data.legs.filter(l => inWindow(l.time));
-  const matches = new Set(legs.map(l => l.id)).size;
-  const unsureN = new Set(data.unsure.filter(u => inWindow(u.time)).map(u => u.id)).size;
-  if (!legs.length) {
-    $("cList").innerHTML = `<div class="card hint">Brak meczów w tym czasie w wybranych ligach${data.errors ? " (część lig poza sezonem)" : ""}. Zaznacz więcej lig albo zmień „Kiedy”.</div>`;
-    return;
-  }
-  const best = optimize(legs, {target, maxLegs, top: 3});
+  try {
+    data = await collectLegs(false, $("cBook").value, {goals: !!W.mk.gole || allowed.has("dc"), minOdds: 1.05, evFilter: ev => dayKey(new Date(ev.commence_time)) === day});
+  } catch (e) { $("cList").innerHTML = ""; $("cInfo").textContent = e.message + (/klucz/.test(e.message) ? " Albo skonfiguruj automat w chmurze (README)." : ""); return; }
+  const legs = data.legs.filter(l => allowed.has(l.market || "h2h") && l.odds >= prof.lo && l.odds <= prof.hi);
+  const matches = new Set(data.legs.map(l => l.id)).size;
+  const unsureN = new Set(data.unsure.map(u => u.id)).size;
+  // najlepszy typ z każdego meczu: najpierw wartość (szansa × kurs), potem szansa
+  const score = l => l.value + l.p * 0.01;
+  const bestPer = new Map();
+  for (const l of legs) { const b = bestPer.get(l.id); if (!b || score(l) > score(b)) bestPer.set(l.id, l); }
+  const ranked = [...bestPer.values()].sort((a, b) => score(b) - score(a));
   couponStore = [];
-  let html = `<div class="card hint" style="margin-bottom:12px">Przeanalizowano ${matches} meczów i ${legs.length} typów.${unsureN ? ` Pominięto ${unsureN} mecz(e), gdzie ostre rynki już zareagowały na newsy, a inni bukmacherzy jeszcze nie.` : ""} Kursy: ${[...oddsSrc].join(", ")}.</div>`;
-  if (!best.length) html += `<div class="card hint">Nie da się ułożyć kuponu z kursem ~${target.toFixed(2)} z maks. ${maxLegs} meczów. Zwiększ liczbę meczów albo zmniejsz kurs.</div>`;
-  html += best.map((c, i) => renderCoupon(c, i === 0 ? "🏆 Najlepszy kupon" : `Alternatywa ${i}`)).join("");
-  const singles = [...legs].sort((a, b) => b.p - a.p).slice(0, 10);
-  html += `<div class="card"><h2>Najpewniejsze typy</h2>${singles.map(l => legHTML(l, `<div class="m">EV ${l.value >= 1 ? "+" : ""}${pct(l.value - 1)} · ${esc(l.src)}</div>`)).join("")}</div>`;
-  html += `<div class="card"><div class="warn">Najwyższa szansa przy danym kursie ≠ zysk. EV na zielono = kurs wyższy niż realna szansa (rzadkie). Na czerwono = na dłuższą metę tracisz, nawet jeśli ten kupon wejdzie.</div></div>`;
+  let html = `<div class="card hint" style="margin-bottom:12px">${new Date(day + "T12:00").toLocaleDateString("pl-PL", {weekday: "long", day: "numeric", month: "long"})}: ${matches} meczów, ${legs.length} typów w profilu „${prof.name}”.${unsureN ? ` Pominięto ${unsureN} mecz(e) ze świeżymi newsami.` : ""} Kursy: ${[...oddsSrc].join(", ")}.</div>`;
+  if (!ranked.length) { $("cList").innerHTML = html + `<div class="card hint">Brak typów w tym profilu na ten dzień. Zmień profil, dzień albo dodaj ligi/rynki.</div>`; return; }
+  const mk = list => { list = [...list].sort((a, b) => Date.parse(a.time) - Date.parse(b.time)); return {legs: list, p: list.reduce((a, l) => a * l.p, 1), odds: list.reduce((a, l) => a * l.odds, 1)}; };
+  const A = ranked.slice(0, n);
+  if (A.length < n) html += `<div class="card hint">Na ten dzień jest tylko ${A.length} mecz(e) z typami w tym profilu — kupon ma mniej pozycji.</div>`;
+  html += renderCoupon(mk(A), `🏆 Kupon ${prof.name.toLowerCase()} · ${A.length} ${A.length === 1 ? "mecz" : "mecze"}`);
+  const B = ranked.slice(n, 2 * n);
+  if (B.length === n) html += renderCoupon(mk(B), "Alternatywa (inne mecze)");
+  html += `<div class="card"><h2>⭐ Najlepsze typy</h2><div class="hint">Jeden typ na mecz, w zakresie kursów profilu. „Przewaga” = szansa × kurs − 1 (bez podatku), zwykle lekko ujemna. Przy rynkach bez kursu w źródle: „≥” = kurs, jaki Betclic zwykle daje; wyższy = lepiej.</div>
+    ${ranked.slice(0, 8).map((l, i) => valueCard(l, i + 1)).join("")}</div>`;
   $("cList").innerHTML = html;
+}
+function valueCard(l, rank) {
+  const t = new Date(l.time).toLocaleString("pl-PL", {weekday: "short", hour: "2-digit", minute: "2-digit"});
+  const edge = l.p * l.odds - 1;
+  return `<div class="vb">
+    <div class="hd"><span class="rk">${rank}</span><div><b>${esc(l.home)} – ${esc(l.away)}</b><div class="m" style="font-size:12px;color:var(--mute)">${esc(l.league)} · ${t}</div></div></div>
+    <div class="pick">${esc(l.pick)}</div>
+    ${l.est
+      ? `<div class="edge" style="color:var(--text)">≥ ${l.odds.toFixed(2)}</div><div class="hint" style="text-align:center;margin:0">kurs w normie · od <b style="color:var(--green)">${l.minOdds.toFixed(2)}</b> masz przewagę</div>`
+      : `<div class="edge" style="color:${edge >= 0 ? "var(--green)" : "var(--red)"}">${edge >= 0 ? "+" : ""}${pct(edge)}</div><div class="hint" style="text-align:center;margin:0">przewaga przy kursie Betclic</div>`}
+    <div class="g3"><div>${l.est ? "~" : ""}${l.odds.toFixed(2)}<small>kurs</small></div><div>${pct(1 / l.odds, 0)}<small>implikowana</small></div><div class="hl">${pct(l.p, 0)}<small>nasz model</small></div></div>
+  </div>`;
 }
 const optimize = Engine.optimize;
 
@@ -859,9 +943,10 @@ function renderCoupon(c, title) {
     ${legs.map(l => legHTML(l)).join("")}
     <div class="cbig">
       <div class="stat"><div class="v">${pct(p, 0)}</div><div class="k">szansa wejścia</div></div>
-      <div class="stat"><div class="v">${odds.toFixed(2)}</div><div class="k">kurs łączny</div></div>
-      <div class="stat"><div class="v" style="color:${ev >= 0 ? "var(--green)" : "var(--red)"}">${ev >= 0 ? "+" : ""}${pct(ev)}</div><div class="k">EV po podatku</div></div>
+      <div class="stat"><div class="v">${legs.some(l => l.est) ? "~" : ""}${odds.toFixed(2)}</div><div class="k">kurs łączny</div></div>
+      <div class="stat"><div class="v" style="color:${ev >= 0 ? "var(--green)" : "var(--red)"}">${ev >= 0 ? "+" : ""}${pct(ev)}</div><div class="k">EV po podatku${legs.some(l => l.est) ? " (szac.)" : ""}</div></div>
     </div>
+    ${legs.some(l => l.est) ? `<div class="hint">~ = szacowany kurs Betclic. Po wpisaniu kuponu sprawdź: kurs <b>niższy</b> niż szacowany → Betclic bierze więcej niż zwykle, wymień typ; kurs <b>wyższy</b> niż „plus od” → masz przewagę.</div>` : ""}
     <div class="hint">${esc(note)}${stake ? ` Sugerowana stawka: <b style="color:var(--text)">${zl(stake)}</b>, możliwa wygrana ${zl(stake * taxF() * odds)} (bez podatku: ${zl(stake * odds)}).` : ""}</div>
     <div class="row">
       <button class="ghost" data-copyc="${idx}">Kopiuj</button>
@@ -870,7 +955,7 @@ function renderCoupon(c, title) {
     <div class="pfbox" id="pf${idx}"></div>
   </div>`;
 }
-const legsForBet = legs => legs.map(({id, sport, market, point, outcome, pick, home, away, time, league, odds, p}) => ({id, sport, market, point, outcome, pick, home, away, time, league, odds, p}));
+const legsForBet = legs => legs.map(({id, sport, market, point, outcome, pick, home, away, time, league, odds, p, est, minOdds}) => ({id, sport, market, point, outcome, pick, home, away, time, league, odds, p, est, minOdds}));
 
 // Wspólny formularz „Jak zagrałeś?”: faktyczna stawka, kurs, bez podatku.
 let pfSave = null;
@@ -1128,7 +1213,7 @@ function renderHeader() {
 }
 function renderAll() { renderHeader(); renderBets(); renderStats(); analyze(); }
 
-load(); fillSettings(); renderAll(); renderLeagueChips();
+load(); fillSettings(); renderAll(); renderLeagueChips(); renderWizard(); loadDayCounts();
 $("verTag").textContent = $("hVer").textContent = "v" + VERSION;
 $("changelog").innerHTML = CHANGELOG.map(([v, t]) => `<div class="bet"><b>v${v}</b><div class="m">${esc(t)}</div></div>`).join("") + `<div class="hint">Plany na kolejne wersje: ROADMAP.md w repo.</div>`;
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("sw.js").catch(() => {});

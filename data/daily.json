@@ -1,27 +1,27 @@
 {
- "date": "2026-10-29",
- "ts": "2026-10-29T10:50:50.616Z",
- "remaining": "153",
+ "date": "2026-10-30",
+ "ts": "2026-10-30T10:49:18.766Z",
+ "remaining": "129",
  "coupon": {
-  "p": 0.4161932792224489,
-  "odds": 2.22,
+  "p": 0.4624210059589677,
+  "odds": 2.02,
   "legs": [
    {
-    "id": "da159a6b84dbb548b4d7b94c722caac5",
-    "sport": "soccer_italy_serie_a",
+    "id": "b275fe870ec88a9f0054c9220beb2673",
+    "sport": "soccer_germany_bundesliga",
     "market": "h2h",
     "point": null,
-    "outcome": "Fiorentina",
-    "pick": "1 (Fiorentina)",
-    "home": "Fiorentina",
-    "away": "Atalanta BC",
-    "time": "2026-10-29T19:45:00Z",
-    "league": "Serie A",
-    "p": 0.4161932792224489,
-    "odds": 2.22,
+    "outcome": "FSV Mainz 05",
+    "pick": "2 (FSV Mainz 05)",
+    "home": "Elversberg",
+    "away": "FSV Mainz 05",
+    "time": "2026-10-30T19:30:00Z",
+    "league": "Bundesliga",
+    "p": 0.4624210059589677,
+    "odds": 2.02,
     "book": "Betclic",
     "n": 23,
-    "src": "Pinnacle + Betfair + Matchbook"
+    "src": "Pinnacle + Matchbook + Betfair"
    }
   ]
  }

@@ -1,26 +1,26 @@
 {
- "date": "2026-10-30",
- "ts": "2026-10-30T10:49:18.766Z",
- "remaining": "129",
+ "date": "2026-10-31",
+ "ts": "2026-10-31T10:19:11.710Z",
+ "remaining": "66",
  "coupon": {
-  "p": 0.4624210059589677,
-  "odds": 2.02,
+  "p": 0.4672998461183977,
+  "odds": 1.96,
   "legs": [
    {
-    "id": "b275fe870ec88a9f0054c9220beb2673",
-    "sport": "soccer_germany_bundesliga",
+    "id": "e82f25e981f2ebc731cfaf5716231af5",
+    "sport": "soccer_italy_serie_a",
     "market": "h2h",
     "point": null,
-    "outcome": "FSV Mainz 05",
-    "pick": "2 (FSV Mainz 05)",
-    "home": "Elversberg",
-    "away": "FSV Mainz 05",
-    "time": "2026-10-30T19:30:00Z",
-    "league": "Bundesliga",
-    "p": 0.4624210059589677,
-    "odds": 2.02,
+    "outcome": "Inter Milan",
+    "pick": "2 (Inter Milan)",
+    "home": "AC Milan",
+    "away": "Inter Milan",
+    "time": "2026-10-31T19:45:00Z",
+    "league": "Serie A",
+    "p": 0.4672998461183977,
+    "odds": 1.96,
     "book": "Betclic",
-    "n": 23,
+    "n": 22,
     "src": "Pinnacle + Matchbook + Betfair"
    }
   ]

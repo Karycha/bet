@@ -1,27 +1,27 @@
 {
- "date": "2026-10-31",
- "ts": "2026-10-31T10:19:11.710Z",
- "remaining": "66",
+ "date": "2026-11-01",
+ "ts": "2026-11-01T11:13:09.650Z",
+ "remaining": "488",
  "coupon": {
-  "p": 0.4672998461183977,
-  "odds": 1.96,
+  "p": 0.49420939990152896,
+  "odds": 1.97,
   "legs": [
    {
-    "id": "e82f25e981f2ebc731cfaf5716231af5",
-    "sport": "soccer_italy_serie_a",
+    "id": "3757bcd765c7da1538cdf2785e784038",
+    "sport": "soccer_spain_la_liga",
     "market": "h2h",
     "point": null,
-    "outcome": "Inter Milan",
-    "pick": "2 (Inter Milan)",
-    "home": "AC Milan",
-    "away": "Inter Milan",
-    "time": "2026-10-31T19:45:00Z",
-    "league": "Serie A",
-    "p": 0.4672998461183977,
-    "odds": 1.96,
+    "outcome": "Athletic Bilbao",
+    "pick": "1 (Athletic Bilbao)",
+    "home": "Athletic Bilbao",
+    "away": "Real Sociedad",
+    "time": "2026-11-01T20:00:00Z",
+    "league": "La Liga",
+    "p": 0.49420939990152896,
+    "odds": 1.97,
     "book": "Betclic",
-    "n": 22,
-    "src": "Pinnacle + Matchbook + Betfair"
+    "n": 21,
+    "src": "Pinnacle + Betfair + Matchbook"
    }
   ]
  }

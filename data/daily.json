@@ -1,26 +1,26 @@
 {
- "date": "2026-11-01",
- "ts": "2026-11-01T11:13:09.650Z",
- "remaining": "488",
+ "date": "2026-11-02",
+ "ts": "2026-11-02T12:16:00.520Z",
+ "remaining": "436",
  "coupon": {
-  "p": 0.49420939990152896,
-  "odds": 1.97,
+  "p": 0.46018285981419327,
+  "odds": 2.02,
   "legs": [
    {
-    "id": "3757bcd765c7da1538cdf2785e784038",
-    "sport": "soccer_spain_la_liga",
+    "id": "d56e71286d50584ccb26b7e004f69afe",
+    "sport": "soccer_poland_ekstraklasa",
     "market": "h2h",
     "point": null,
-    "outcome": "Athletic Bilbao",
-    "pick": "1 (Athletic Bilbao)",
-    "home": "Athletic Bilbao",
-    "away": "Real Sociedad",
-    "time": "2026-11-01T20:00:00Z",
-    "league": "La Liga",
-    "p": 0.49420939990152896,
-    "odds": 1.97,
+    "outcome": "Raków Częstochowa",
+    "pick": "1 (Raków Częstochowa)",
+    "home": "Raków Częstochowa",
+    "away": "Pogoń Szczecin",
+    "time": "2026-11-02T19:30:00Z",
+    "league": "Ekstraklasa",
+    "p": 0.46018285981419327,
+    "odds": 2.02,
     "book": "Betclic",
-    "n": 21,
+    "n": 20,
     "src": "Pinnacle + Betfair + Matchbook"
    }
   ]

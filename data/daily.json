@@ -1,27 +1,27 @@
 {
- "date": "2026-11-02",
- "ts": "2026-11-02T12:16:00.520Z",
- "remaining": "436",
+ "date": "2026-11-03",
+ "ts": "2026-11-03T11:51:16.451Z",
+ "remaining": "377",
  "coupon": {
-  "p": 0.46018285981419327,
-  "odds": 2.02,
+  "p": 0.4741239176624969,
+  "odds": 1.95,
   "legs": [
    {
-    "id": "d56e71286d50584ccb26b7e004f69afe",
-    "sport": "soccer_poland_ekstraklasa",
+    "id": "9b8076d3ffa027df6f6cb3189de46706",
+    "sport": "soccer_uefa_champs_league",
     "market": "h2h",
     "point": null,
-    "outcome": "Raków Częstochowa",
-    "pick": "1 (Raków Częstochowa)",
-    "home": "Raków Częstochowa",
-    "away": "Pogoń Szczecin",
-    "time": "2026-11-02T19:30:00Z",
-    "league": "Ekstraklasa",
-    "p": 0.46018285981419327,
-    "odds": 2.02,
+    "outcome": "Galatasaray",
+    "pick": "1 (Galatasaray)",
+    "home": "Galatasaray",
+    "away": "VfB Stuttgart",
+    "time": "2026-11-03T17:45:00Z",
+    "league": "Liga Mistrzów",
+    "p": 0.4741239176624969,
+    "odds": 1.95,
     "book": "Betclic",
-    "n": 20,
-    "src": "Pinnacle + Betfair + Matchbook"
+    "n": 22,
+    "src": "Betfair + Pinnacle + Matchbook"
    }
   ]
  }

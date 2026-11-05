@@ -1,45 +1,6 @@
 {
- "date": "2026-11-04",
- "ts": "2026-11-04T12:00:47.882Z",
- "remaining": "331",
- "coupon": {
-  "p": 0.444480844108011,
-  "odds": 1.9418,
-  "legs": [
-   {
-    "id": "6277e639c064e641265fcb98a0e200b9",
-    "sport": "soccer_uefa_champs_league",
-    "market": "h2h",
-    "point": null,
-    "outcome": "Viking FK",
-    "pick": "1 (Viking FK)",
-    "home": "Viking FK",
-    "away": "Sabah FK",
-    "time": "2026-11-04T20:00:00Z",
-    "league": "Liga Mistrzów",
-    "p": 0.7039781871507594,
-    "odds": 1.33,
-    "book": "Betclic",
-    "n": 22,
-    "src": "Betfair + Pinnacle + Matchbook"
-   },
-   {
-    "id": "df7d2d81b9e2f3f11c6aeddaee6b7085",
-    "sport": "soccer_uefa_champs_league",
-    "market": "h2h",
-    "point": null,
-    "outcome": "Manchester City",
-    "pick": "2 (Manchester City)",
-    "home": "RB Leipzig",
-    "away": "Manchester City",
-    "time": "2026-11-04T20:00:00Z",
-    "league": "Liga Mistrzów",
-    "p": 0.6313843982964543,
-    "odds": 1.46,
-    "book": "Betclic",
-    "n": 22,
-    "src": "Betfair + Pinnacle + Matchbook"
-   }
-  ]
- }
+ "date": "2026-11-05",
+ "ts": "2026-11-05T12:12:10.814Z",
+ "remaining": "210",
+ "coupon": null
 }

@@ -1,27 +1,27 @@
 {
- "date": "2026-11-07",
- "ts": "2026-11-07T10:59:34.585Z",
- "remaining": "164",
+ "date": "2026-11-08",
+ "ts": "2026-11-08T11:13:46.774Z",
+ "remaining": "152",
  "coupon": {
-  "p": 0.4741019714521085,
-  "odds": 1.95,
+  "p": 0.46002083561444995,
+  "odds": 1.98,
   "legs": [
    {
-    "id": "71ca5141a1c532e390c6fa14e080d8bd",
-    "sport": "soccer_spain_la_liga",
+    "id": "23bf8ea47358ef82f65aa7398a2b3921",
+    "sport": "soccer_italy_serie_a",
     "market": "h2h",
     "point": null,
-    "outcome": "Athletic Bilbao",
-    "pick": "2 (Athletic Bilbao)",
-    "home": "CA Osasuna",
-    "away": "Athletic Bilbao",
-    "time": "2026-11-07T17:30:00Z",
-    "league": "La Liga",
-    "p": 0.4741019714521085,
-    "odds": 1.95,
+    "outcome": "Napoli",
+    "pick": "1 (Napoli)",
+    "home": "Napoli",
+    "away": "Lazio",
+    "time": "2026-11-08T11:30:00Z",
+    "league": "Serie A",
+    "p": 0.46002083561444995,
+    "odds": 1.98,
     "book": "Betclic",
-    "n": 21,
-    "src": "Pinnacle + Betfair + Matchbook"
+    "n": 24,
+    "src": "Pinnacle + Matchbook + Betfair"
    }
   ]
  }

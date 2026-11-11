@@ -1,10 +1,6 @@
 {
   "leagues": [
     [
-      "soccer_poland_ekstraklasa",
-      "Ekstraklasa"
-    ],
-    [
       "soccer_uefa_champs_league",
       "Liga Mistrzów"
     ],
@@ -17,12 +13,20 @@
       "La Liga"
     ],
     [
-      "soccer_germany_bundesliga",
-      "Bundesliga"
-    ],
-    [
       "soccer_italy_serie_a",
       "Serie A"
+    ],
+    [
+      "basketball_nba",
+      "NBA"
+    ],
+    [
+      "icehockey_nhl",
+      "NHL"
+    ],
+    [
+      "soccer_uefa_europa_league",
+      "Liga Europy"
     ]
   ],
   "totals": true,

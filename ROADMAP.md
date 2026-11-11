@@ -63,6 +63,11 @@
 - Pobieranie na żądanie (apka pyta o zgodę na zużycie limitu) albo z chmury (workflow „Rożne i kartki”)
 - Rozliczanie ręczne (brak tych statystyk w źródle wyników)
 
+## ✅ v3.2 – Wnioski z pierwszego miesiąca
+- Karta kuponu pokazuje, ile średnio wraca ze 100 zł; generator domyślnie 2 mecze
+- Ostrzeżenie przy zakładach starszych niż 3 dni (źródło wyników już ich nie poda)
+- Automat: NBA, NHL, Liga Europy zamiast Ekstraklasy i Bundesligi (ten sam koszt)
+
 ## 🔜 Pomysły
 - Drugi przebieg automatu przed meczami wieczornymi (dokładniejszy CLV) – zależnie od limitu API
 - Synchronizacja zakładów między urządzeniami (zapis w repo / gist)

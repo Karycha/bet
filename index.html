@@ -306,8 +306,9 @@ svg{width:100%;height:auto;display:block}
 <script>
 "use strict";
 const KEY = "betdoradca_v1";
-const VERSION = "3.2.1";
+const VERSION = "3.2.2";
 const CHANGELOG = [
+  ["3.2.2", "Typy NHL/NBA oznaczone „z dogrywką” + ostrzeżenie, żeby w Betclic brać „Zwycięzca meczu”, a nie wynik bez dogrywki."],
   ["3.2.1", "Stuknięcie w mecz w Zakładach ustawia jego wynik ręcznie (✅/❌), a kupon rozlicza się sam."],
   ["3.2", "Kupon pokazuje, ile średnio wraca ze 100 zł; generator domyślnie 2 mecze; ostrzeżenie przy zakładach starszych niż 3 dni (do rozliczenia ręcznie); NBA, NHL i Liga Europy w automacie."],
   ["3.1", "Rożne i kartki w generatorze (linie z Pinnacle + model), pobierane na żądanie. Zielone „nasz model” tylko gdy jest przewaga."],
@@ -1001,6 +1002,7 @@ function renderCoupon(c, title) {
       <div class="stat"><div class="v">${legs.some(l => l.est) ? "~" : ""}${odds.toFixed(2)}</div><div class="k">kurs łączny</div></div>
       <div class="stat"><div class="v" style="color:${ev >= 0 ? "var(--green)" : "var(--red)"}">${ev >= 0 ? "+" : ""}${pct(ev)}</div><div class="k">EV po podatku${legs.some(l => l.est) ? " (szac.)" : ""}</div></div>
     </div>
+    ${legs.some(l => /^icehockey/.test(l.sport || "")) ? `<div class="hint" style="color:var(--yellow)">🏒 NHL: w Betclic wybierz rynek <b>„Zwycięzca meczu”</b> (z dogrywką), nie „Wynik meczu (z wyłączeniem dogrywki)” — tam remis po 60 min = przegrana.</div>` : ""}
     ${legs.some(l => l.est) ? `<div class="hint">~ = szacowany kurs Betclic. Po wpisaniu kuponu sprawdź: kurs <b>niższy</b> niż szacowany → Betclic bierze więcej niż zwykle, wymień typ; kurs <b>wyższy</b> niż „plus od” → masz przewagę.</div>` : ""}
     <div class="hint">Średnio wraca <b style="color:var(--text)">${Math.round(p * odds * 100)} zł ze 100</b> bez podatku${taxF() < 1 ? ` (${Math.round(p * odds * taxF() * 100)} zł z podatkiem)` : ""}. ${legs.length >= 3 ? "Każdy mecz mniej na kuponie to ok. +5 zł do tej liczby." : ""}</div>
     <div class="hint">${esc(note)}${stake ? ` Sugerowana stawka: <b style="color:var(--text)">${zl(stake)}</b>, możliwa wygrana ${zl(stake * taxF() * odds)} (bez podatku: ${zl(stake * odds)}).` : ""}</div>

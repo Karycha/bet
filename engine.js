@@ -252,8 +252,10 @@ function extraLegs(extras, {tax = 1, minOdds = 1.05, now = Date.now(), evFilter 
 function unitFor(sport) { return sport.startsWith("basketball") ? "pkt" : "gola"; }
 function pickLabel(ev, name, market = "h2h", point = null, sport = "soccer") {
   if (market === "totals") return `${name === "Over" ? "Powyżej" : "Poniżej"} ${String(point).replace(".", ",")} ${unitFor(sport)}`;
-  if (name === ev.home_team) return `1 (${name})`;
-  if (name === ev.away_team) return `2 (${name})`;
+  // NHL/NBA: szanse są dla rynku z dogrywką – w Betclic „Zwycięzca meczu”, NIE „Wynik meczu (z wyłączeniem dogrywki)”
+  const ot = /^(icehockey|basketball)/.test(sport) ? " · z dogrywką" : "";
+  if (name === ev.home_team) return `1 (${name})${ot}`;
+  if (name === ev.away_team) return `2 (${name})${ot}`;
   if (/draw/i.test(name)) return "X (remis)";
   return name;
 }

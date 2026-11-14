@@ -1,6 +1,28 @@
 {
- "date": "2026-11-13",
- "ts": "2026-11-13T12:06:03.322Z",
- "remaining": "65",
- "coupon": null
+ "date": "2026-11-14",
+ "ts": "2026-11-14T11:23:36.053Z",
+ "remaining": "53",
+ "coupon": {
+  "p": 0.48284911741927955,
+  "odds": 1.96,
+  "legs": [
+   {
+    "id": "c3f43b11aaf8ba26496727f557330d72",
+    "sport": "icehockey_nhl",
+    "market": "h2h",
+    "point": null,
+    "outcome": "Winnipeg Jets",
+    "pick": "2 (Winnipeg Jets) · z dogrywką",
+    "home": "Chicago Blackhawks",
+    "away": "Winnipeg Jets",
+    "time": "2026-11-14T20:40:00Z",
+    "league": "NHL",
+    "p": 0.48284911741927955,
+    "odds": 1.96,
+    "book": "Betclic",
+    "n": 12,
+    "src": "mediana 12 buk."
+   }
+  ]
+ }
 }

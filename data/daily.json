@@ -1,27 +1,27 @@
 {
- "date": "2026-11-14",
- "ts": "2026-11-14T11:23:36.053Z",
- "remaining": "53",
+ "date": "2026-11-15",
+ "ts": "2026-11-15T11:53:46.964Z",
+ "remaining": "41",
  "coupon": {
-  "p": 0.48284911741927955,
-  "odds": 1.96,
+  "p": 0.47253128868365485,
+  "odds": 1.95,
   "legs": [
    {
-    "id": "c3f43b11aaf8ba26496727f557330d72",
-    "sport": "icehockey_nhl",
+    "id": "db26abc3cfd070ab012227413abafeb2",
+    "sport": "basketball_nba",
     "market": "h2h",
     "point": null,
-    "outcome": "Winnipeg Jets",
-    "pick": "2 (Winnipeg Jets) · z dogrywką",
-    "home": "Chicago Blackhawks",
-    "away": "Winnipeg Jets",
-    "time": "2026-11-14T20:40:00Z",
-    "league": "NHL",
-    "p": 0.48284911741927955,
-    "odds": 1.96,
+    "outcome": "Charlotte Hornets",
+    "pick": "2 (Charlotte Hornets) · z dogrywką",
+    "home": "Los Angeles Clippers",
+    "away": "Charlotte Hornets",
+    "time": "2026-11-15T21:40:00Z",
+    "league": "NBA",
+    "p": 0.47253128868365485,
+    "odds": 1.95,
     "book": "Betclic",
-    "n": 12,
-    "src": "mediana 12 buk."
+    "n": 25,
+    "src": "Betfair + Matchbook + Pinnacle"
    }
   ]
  }

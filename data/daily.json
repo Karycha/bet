@@ -1,28 +1,6 @@
 {
- "date": "2026-11-15",
- "ts": "2026-11-15T11:53:46.964Z",
- "remaining": "41",
- "coupon": {
-  "p": 0.47253128868365485,
-  "odds": 1.95,
-  "legs": [
-   {
-    "id": "db26abc3cfd070ab012227413abafeb2",
-    "sport": "basketball_nba",
-    "market": "h2h",
-    "point": null,
-    "outcome": "Charlotte Hornets",
-    "pick": "2 (Charlotte Hornets) · z dogrywką",
-    "home": "Los Angeles Clippers",
-    "away": "Charlotte Hornets",
-    "time": "2026-11-15T21:40:00Z",
-    "league": "NBA",
-    "p": 0.47253128868365485,
-    "odds": 1.95,
-    "book": "Betclic",
-    "n": 25,
-    "src": "Betfair + Matchbook + Pinnacle"
-   }
-  ]
- }
+ "date": "2026-11-16",
+ "ts": "2026-11-16T12:39:03.345Z",
+ "remaining": "28",
+ "coupon": null
 }
